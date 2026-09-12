@@ -1,0 +1,2 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>Website temporarily unavailable · Ezyweb</title>@vite('resources/css/app.css')</head>
+<body class="tenant-site"><main class="site-container py-24 text-center"><p class="site-eyebrow">Ezyweb</p><h1>Website temporarily unavailable</h1><p class="site-lead mx-auto mt-4">This website is currently unavailable. Please contact the website owner or check back later.</p></main></body></html>
