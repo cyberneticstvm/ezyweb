@@ -56,6 +56,55 @@ function initializeHeroSlider(slider: HTMLElement) {
 
 document.querySelectorAll<HTMLElement>('[data-hero-slider]').forEach(initializeHeroSlider);
 
+function initializeVideoEmbed(container: HTMLElement) {
+    const link = container.querySelector<HTMLAnchorElement>('.site-video-watch');
+    if (!link) return;
+
+    link.addEventListener('click', (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        const provider = container.dataset.videoProvider;
+        const id = container.dataset.videoId ?? '';
+        const validYoutube = provider === 'youtube' && /^[A-Za-z0-9_-]{11}$/.test(id);
+        const validVimeo = provider === 'vimeo' && /^[0-9]{1,20}$/.test(id);
+        if (!validYoutube && !validVimeo) return;
+
+        event.preventDefault();
+        const muted = container.dataset.videoMuted === '1';
+        const loop = container.dataset.videoLoop === '1';
+        const controls = container.dataset.videoControls !== '0';
+        const params = new URLSearchParams({ autoplay: '1' });
+        let base: string;
+        if (validYoutube) {
+            base = `https://www.youtube-nocookie.com/embed/${id}`;
+            params.set('mute', muted ? '1' : '0');
+            params.set('controls', controls ? '1' : '0');
+            params.set('rel', '0');
+            if (loop) {
+                params.set('loop', '1');
+                params.set('playlist', id);
+            }
+        } else {
+            base = `https://player.vimeo.com/video/${id}`;
+            params.set('muted', muted ? '1' : '0');
+            params.set('loop', loop ? '1' : '0');
+            params.set('controls', controls ? '1' : '0');
+            params.set('dnt', '1');
+        }
+
+        const frame = document.createElement('iframe');
+        frame.src = `${base}?${params.toString()}`;
+        frame.title = container.dataset.videoTitle || 'Video player';
+        frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        frame.className = 'site-video-frame';
+        container.replaceChildren(frame);
+        frame.focus();
+    });
+}
+
+document.querySelectorAll<HTMLElement>('[data-video-embed]').forEach(initializeVideoEmbed);
+
 function initializeCounters(section: HTMLElement) {
     if (section.dataset.animate !== 'true') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -65,9 +114,21 @@ function initializeCounters(section: HTMLElement) {
 
     const duration = Math.min(5000, Math.max(1000, Number(section.dataset.duration) || 2000));
     const grouping = section.dataset.grouping === 'true';
-    const formatter = new Intl.NumberFormat(undefined, { useGrouping: grouping });
-    numbers.forEach((number) => {
-        number.textContent = formatter.format(0);
+    const metrics = numbers.map((element) => {
+        const decimals = Math.min(2, Math.max(0, Number(element.dataset.decimals) || 0));
+        return {
+            element,
+            target: Math.max(0, Number(element.dataset.value) || 0),
+            factor: 10 ** decimals,
+            formatter: new Intl.NumberFormat(undefined, {
+                useGrouping: grouping,
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals,
+            }),
+        };
+    });
+    metrics.forEach(({ element, formatter }) => {
+        element.textContent = formatter.format(0);
     });
 
     const play = () => {
@@ -75,9 +136,8 @@ function initializeCounters(section: HTMLElement) {
         const frame = (now: number) => {
             const progress = Math.min(1, (now - started) / duration);
             const eased = 1 - Math.pow(1 - progress, 3);
-            numbers.forEach((number) => {
-                const target = Math.max(0, Number(number.dataset.value) || 0);
-                number.textContent = formatter.format(Math.round(target * eased));
+            metrics.forEach(({ element, target, factor, formatter }) => {
+                element.textContent = formatter.format(Math.round(target * eased * factor) / factor);
             });
             if (progress < 1) window.requestAnimationFrame(frame);
         };

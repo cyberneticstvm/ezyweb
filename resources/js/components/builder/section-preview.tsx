@@ -37,6 +37,18 @@ export interface CounterItem extends Record<string, string> {
     description: string;
 }
 
+export interface StatisticItem extends Record<string, string> {
+    value: string;
+    prefix: string;
+    suffix: string;
+    label: string;
+    description: string;
+    trend_text: string;
+    trend_direction: string;
+    source_label: string;
+    source_url: string;
+}
+
 export interface BrandLogo extends Record<string, string> {
     image_id: string;
     name: string;
@@ -83,7 +95,14 @@ export interface PricingItem extends Record<string, string> {
 
 export type SectionContent = Record<
     string,
-    string | HeroSlide[] | CounterItem[] | BrandLogo[] | FeatureItem[] | ProcessItem[] | PricingItem[]
+    | string
+    | HeroSlide[]
+    | CounterItem[]
+    | StatisticItem[]
+    | BrandLogo[]
+    | FeatureItem[]
+    | ProcessItem[]
+    | PricingItem[]
 >;
 
 export interface RegistryDefinition {
@@ -100,8 +119,12 @@ export interface RegistryDefinition {
             | 'textarea'
             | 'url'
             | 'richtext'
+            | 'image-text'
+            | 'video'
             | 'slides'
             | 'counters'
+            | 'statistics'
+            | 'spacer-divider'
             | 'logos'
             | 'products'
             | 'testimonials'
@@ -405,10 +428,18 @@ function SectionBlock({
             id={section.anchor ?? undefined}
             onClick={onSelect}
             className={cn(
-                'relative cursor-pointer border-b border-[var(--theme-border)] transition-shadow outline-none',
-                section.design_settings.spacing === 'compact' && 'px-5 py-7',
-                section.design_settings.spacing === 'normal' && 'px-5 py-11',
-                section.design_settings.spacing === 'spacious' && 'px-5 py-16',
+                'relative cursor-pointer transition-shadow outline-none',
+                section.type !== 'spacer-divider' && 'border-b border-[var(--theme-border)]',
+                section.type === 'spacer-divider' && 'px-5 py-0',
+                section.type !== 'spacer-divider' &&
+                    section.design_settings.spacing === 'compact' &&
+                    'px-5 py-7',
+                section.type !== 'spacer-divider' &&
+                    section.design_settings.spacing === 'normal' &&
+                    'px-5 py-11',
+                section.type !== 'spacer-divider' &&
+                    section.design_settings.spacing === 'spacious' &&
+                    'px-5 py-16',
                 primary && 'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)]',
                 dark && 'bg-slate-950 text-white',
                 muted && 'bg-[var(--theme-surface)]',
@@ -427,7 +458,7 @@ function SectionBlock({
                     'mx-auto max-w-4xl',
                     section.design_settings.alignment === 'center' && 'text-center',
                     section.design_settings.alignment === 'right' && 'text-right',
-                    !['hero', 'hero-slider', 'cta', 'contact', 'map'].includes(section.type) &&
+                    !['hero', 'hero-slider', 'cta', 'contact', 'map', 'statistics'].includes(section.type) &&
                         templateKey === 'horizon' &&
                         section.variant === 'split' &&
                         'grid items-center gap-6 sm:grid-cols-2',
@@ -443,6 +474,8 @@ function SectionBlock({
                     <MissionVisionPreview content={content} label={label} variant={section.variant} />
                 ) : section.type === 'counters' ? (
                     <CountersPreview content={content} label={label} variant={section.variant} />
+                ) : section.type === 'statistics' ? (
+                    <StatisticsPreview content={content} label={label} variant={section.variant} />
                 ) : section.type === 'features' ? (
                     <FeaturesPreview content={content} label={label} variant={section.variant} />
                 ) : section.type === 'process' ? (
@@ -457,6 +490,8 @@ function SectionBlock({
                     <MapPreview content={content} label={label} variant={section.variant} />
                 ) : section.type === 'brand-carousel' ? (
                     <BrandCarouselPreview content={content} label={label} variant={section.variant} />
+                ) : section.type === 'logo-cloud' ? (
+                    <LogoCloudPreview content={content} label={label} variant={section.variant} />
                 ) : section.type === 'products' ? (
                     <ProductsPreview
                         content={content}
@@ -525,7 +560,13 @@ function SectionBlock({
                 ) : section.type === 'hero-slider' ? (
                     <HeroSliderPreview content={content} label={label} primary={primary} dark={dark} />
                 ) : section.type === 'rich-text' ? (
-                    <RichTextPreview content={content} label={label} />
+                    <RichTextPreview content={content} label={label} variant={section.variant} />
+                ) : section.type === 'image-text' ? (
+                    <ImageTextPreview content={content} label={label} variant={section.variant} />
+                ) : section.type === 'video' ? (
+                    <VideoPreview content={content} label={label} variant={section.variant} />
+                ) : section.type === 'spacer-divider' ? (
+                    <SpacerDividerPreview content={content} variant={section.variant} />
                 ) : (
                     <div>
                         {textValue(content.eyebrow) && (
@@ -610,12 +651,9 @@ function NewsletterPreview({
                 {textValue(content.show_form_heading) === '1' && textValue(content.form_heading) && (
                     <h3 className="text-sm font-bold">{textValue(content.form_heading)}</h3>
                 )}
-                {textValue(content.show_form_description) === '1' &&
-                    textValue(content.form_description) && (
-                        <p className="mt-1 text-[10px] text-slate-500">
-                            {textValue(content.form_description)}
-                        </p>
-                    )}
+                {textValue(content.show_form_description) === '1' && textValue(content.form_description) && (
+                    <p className="mt-1 text-[10px] text-slate-500">{textValue(content.form_description)}</p>
+                )}
                 <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                     {showName && (
                         <span className="rounded border border-slate-200 px-3 py-2 text-[10px] text-slate-400">
@@ -1674,6 +1712,96 @@ function ProductsPreview({
     );
 }
 
+function LogoCloudPreview({
+    content,
+    label,
+    variant,
+}: {
+    content: SectionContent;
+    label: string;
+    variant: string;
+}) {
+    const logos = Array.isArray(content.logos) ? (content.logos as BrandLogo[]) : [];
+    const columns = Math.min(6, Math.max(2, Number(textValue(content.logo_columns)) || 4));
+    const size = textValue(content.logo_size);
+    const spacing = textValue(content.logo_spacing);
+    const showCards = textValue(content.show_cards) === '1';
+    const showNames = textValue(content.show_names) === '1';
+    const grayscale = textValue(content.grayscale) === '1';
+
+    return (
+        <div>
+            <div className="mb-6">
+                {textValue(content.eyebrow) && (
+                    <p className="mb-2 text-[10px] font-bold tracking-widest text-[var(--theme-accent)] uppercase">
+                        {textValue(content.eyebrow)}
+                    </p>
+                )}
+                <h2 className="text-xl font-bold text-[var(--theme-heading)] sm:text-3xl">
+                    {textValue(content.heading) || label}
+                </h2>
+                {textValue(content.description) && (
+                    <p className="mt-3 max-w-2xl text-sm leading-6 opacity-80">
+                        {textValue(content.description)}
+                    </p>
+                )}
+            </div>
+            {logos.length ? (
+                <div
+                    className={cn(
+                        'gap-3',
+                        variant === 'band'
+                            ? 'flex flex-wrap justify-center rounded-[var(--theme-radius)] bg-[var(--theme-surface)] p-3'
+                            : 'grid',
+                        spacing === 'compact' && 'gap-1.5',
+                        spacing === 'loose' && 'gap-5',
+                    )}
+                    style={
+                        variant === 'grid'
+                            ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+                            : variant === 'default'
+                              ? { gridTemplateColumns: 'repeat(auto-fit, minmax(7rem, 1fr))' }
+                              : undefined
+                    }
+                >
+                    {logos.map((logo, index) => (
+                        <div
+                            key={`${logo.image_id}-${index}`}
+                            className={cn(
+                                'grid min-h-16 min-w-0 place-items-center p-2 text-center',
+                                variant === 'band' && 'min-w-24 flex-1',
+                                showCards &&
+                                    'rounded-[var(--theme-radius)] border border-[var(--theme-border)] bg-white',
+                            )}
+                        >
+                            <img
+                                src={`/media/${logo.image_id}/small`}
+                                alt={logo.alt || logo.name}
+                                className={cn(
+                                    'max-w-full object-contain',
+                                    size === 'compact'
+                                        ? 'max-h-8'
+                                        : size === 'large'
+                                          ? 'max-h-16'
+                                          : 'max-h-12',
+                                    grayscale && 'grayscale',
+                                )}
+                            />
+                            {showNames && logo.name && (
+                                <span className="mt-1 block text-[9px] font-semibold">{logo.name}</span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="rounded-lg border border-dashed p-5 text-center text-xs opacity-60">
+                    Upload logo images in the Media library, then add them in Website Design.
+                </p>
+            )}
+        </div>
+    );
+}
+
 function BrandCarouselPreview({
     content,
     label,
@@ -2282,6 +2410,100 @@ function FeaturesPreview({
     );
 }
 
+function StatisticsPreview({
+    content,
+    label,
+    variant,
+}: {
+    content: SectionContent;
+    label: string;
+    variant: string;
+}) {
+    const stats = Array.isArray(content.stats) ? (content.stats as StatisticItem[]) : [];
+    const columns = Math.min(4, Math.max(2, Number(textValue(content.stats_columns)) || 4));
+    const showDescriptions = textValue(content.show_descriptions) !== '0';
+    const showTrends = textValue(content.show_trends) !== '0';
+    const showSources = textValue(content.show_sources) !== '0';
+    const highlightFirst = textValue(content.highlight_first) === '1';
+    const grouping = textValue(content.use_grouping) !== '0';
+    const formatValue = (item: StatisticItem) =>
+        (Number.isFinite(Number(item.value)) ? Number(item.value) : 0).toLocaleString(undefined, {
+            useGrouping: grouping,
+            minimumFractionDigits: Math.min(2, (item.value.split('.')[1] ?? '').length),
+            maximumFractionDigits: 2,
+        });
+    return (
+        <div className={cn(variant === 'split' && 'grid gap-6 sm:grid-cols-[0.75fr_1.25fr]')}>
+            <div className="mb-6">
+                {textValue(content.eyebrow) && (
+                    <p className="mb-2 text-[10px] font-bold tracking-widest text-[var(--theme-accent)] uppercase">
+                        {textValue(content.eyebrow)}
+                    </p>
+                )}
+                <h2 className="text-xl font-bold text-[var(--theme-heading)] sm:text-3xl">
+                    {textValue(content.heading) || label}
+                </h2>
+                {textValue(content.description) && (
+                    <p className="mt-3 max-w-2xl text-sm leading-6 opacity-80">
+                        {textValue(content.description)}
+                    </p>
+                )}
+            </div>
+            {stats.length ? (
+                <div
+                    className="grid gap-3"
+                    style={{
+                        gridTemplateColumns: `repeat(${variant === 'split' ? 2 : columns}, minmax(0, 1fr))`,
+                    }}
+                >
+                    {stats.map((item, index) => (
+                        <article
+                            key={`${item.label}-${index}`}
+                            className={cn(
+                                'min-w-0 rounded-[var(--theme-radius)] p-3',
+                                variant === 'cards' &&
+                                    'border border-[var(--theme-border)] bg-[var(--theme-surface)]',
+                                highlightFirst &&
+                                    index === 0 &&
+                                    'bg-[var(--theme-primary)] text-[var(--theme-primary-foreground)]',
+                            )}
+                        >
+                            <p className="text-2xl font-black break-words sm:text-3xl">
+                                {item.prefix}
+                                {formatValue(item)}
+                                {item.suffix}
+                            </p>
+                            <h3 className="mt-1 text-xs font-bold">{item.label}</h3>
+                            {showDescriptions && item.description && (
+                                <p className="mt-1 line-clamp-2 text-[10px] opacity-70">{item.description}</p>
+                            )}
+                            {showTrends && item.trend_text && (
+                                <p className="mt-2 text-[10px] font-bold opacity-80">
+                                    {item.trend_direction === 'up'
+                                        ? '↑ '
+                                        : item.trend_direction === 'down'
+                                          ? '↓ '
+                                          : ''}
+                                    {item.trend_text}
+                                </p>
+                            )}
+                            {showSources && (item.source_label || item.source_url) && (
+                                <p className="mt-1 text-[9px] opacity-60">
+                                    Source: {item.source_label || 'View source'}
+                                </p>
+                            )}
+                        </article>
+                    ))}
+                </div>
+            ) : (
+                <p className="rounded-lg border border-dashed p-5 text-center text-xs opacity-60">
+                    Add verified statistics in Website Design.
+                </p>
+            )}
+        </div>
+    );
+}
+
 function CountersPreview({
     content,
     label,
@@ -2681,11 +2903,269 @@ function HeroSliderPreview({
     );
 }
 
-function RichTextPreview({ content, label }: { content: SectionContent; label: string }) {
+function SpacerDividerPreview({ content, variant }: { content: SectionContent; variant: string }) {
+    const allowed = [0, 16, 32, 48, 64, 96, 128];
+    const before = Number(textValue(content.space_before));
+    const after = Number(textValue(content.space_after));
+    const width = textValue(content.line_width);
+    const lineWidth =
+        width === 'narrow' ? '25%' : width === 'medium' ? '50%' : width === 'wide' ? '75%' : '100%';
+    const color =
+        textValue(content.line_color) === 'primary'
+            ? 'var(--theme-primary)'
+            : textValue(content.line_color) === 'accent'
+              ? 'var(--theme-accent)'
+              : 'var(--theme-border)';
+    const weight = Math.min(4, Math.max(1, Number(textValue(content.line_weight)) || 1));
+    const style = textValue(content.line_style);
+    const borderStyle = style === 'dashed' || style === 'dotted' ? style : 'solid';
+    const label = textValue(content.line_label);
+    const line = (
+        <span className="min-w-0 flex-1" style={{ borderTop: `${weight}px ${borderStyle} ${color}` }} />
+    );
+    return (
+        <div
+            className="relative min-h-6"
+            style={{
+                paddingTop: allowed.includes(before) ? before : 48,
+                paddingBottom: allowed.includes(after) ? after : 48,
+            }}
+        >
+            {variant !== 'space' ? (
+                <div
+                    className={cn(
+                        'relative mx-auto flex items-center',
+                        width === 'narrow' && 'w-1/4',
+                        width === 'medium' && 'w-1/2',
+                        width === 'wide' && 'w-3/4',
+                    )}
+                    style={{ width: lineWidth }}
+                >
+                    {line}
+                    {label && (
+                        <span
+                            className={cn(
+                                'px-2 text-[10px] font-bold',
+                                variant === 'line' && 'mx-2 rounded-full border px-3 py-1',
+                            )}
+                            style={variant === 'line' ? { borderColor: color } : undefined}
+                        >
+                            {label}
+                        </span>
+                    )}
+                    {label && line}
+                    {variant === 'line' && !label && (
+                        <span
+                            className="absolute left-1/2 size-2 -translate-x-1/2 rotate-45"
+                            style={{ backgroundColor: color }}
+                        />
+                    )}
+                </div>
+            ) : (
+                <span className="absolute inset-0 grid place-items-center text-[10px] opacity-45">
+                    Preview guide only · blank space on live site
+                </span>
+            )}
+        </div>
+    );
+}
+
+function VideoPreview({
+    content,
+    label,
+    variant,
+}: {
+    content: SectionContent;
+    label: string;
+    variant: string;
+}) {
+    const poster = textValue(content.poster_image_id);
+    const ratio = textValue(content.aspect_ratio);
+    const videoUrl = textValue(content.video_url);
+    const provider = videoUrl.includes('youtu')
+        ? 'YouTube'
+        : videoUrl.includes('vimeo')
+          ? 'Vimeo'
+          : 'video file';
+    return (
+        <div className={cn('mx-auto', variant === 'contained' && 'max-w-3xl')}>
+            {textValue(content.eyebrow) && (
+                <p className="mb-2 text-[10px] font-bold tracking-widest text-[var(--theme-accent)] uppercase">
+                    {textValue(content.eyebrow)}
+                </p>
+            )}
+            <h2 className="text-xl font-bold text-[var(--theme-heading)] sm:text-3xl">
+                {textValue(content.heading) || label}
+            </h2>
+            {textValue(content.description) && (
+                <p className="mt-3 text-sm leading-6 opacity-80">{textValue(content.description)}</p>
+            )}
+            <div
+                className={cn(
+                    'relative mt-6 grid place-items-center overflow-hidden rounded-[var(--theme-radius)] bg-slate-900 text-white',
+                    ratio === 'vertical'
+                        ? 'mx-auto aspect-[9/16] max-w-sm'
+                        : ratio === 'standard'
+                          ? 'aspect-[4/3]'
+                          : 'aspect-video',
+                )}
+            >
+                {poster && (
+                    <img
+                        src={`/media/${poster}/medium`}
+                        alt={textValue(content.poster_alt)}
+                        className="absolute inset-0 size-full object-cover"
+                    />
+                )}
+                <span className="relative grid size-14 place-items-center rounded-full bg-white/90 text-xl text-slate-900 shadow-lg">
+                    ▶
+                </span>
+                <span className="absolute right-3 bottom-3 rounded-full bg-slate-900/75 px-3 py-1 text-[10px] font-bold">
+                    {textValue(content.video_url) ? `Play ${provider} video` : 'Add a video URL'}
+                </span>
+            </div>
+            {textValue(content.show_caption) !== '0' && textValue(content.video_caption) && (
+                <p className="mt-2 text-xs opacity-70">{textValue(content.video_caption)}</p>
+            )}
+            {(textValue(content.transcript_url) || textValue(content.primary_url)) && (
+                <div className="mt-4 flex gap-3 text-xs font-semibold text-[var(--theme-accent)]">
+                    {textValue(content.transcript_url) && (
+                        <span>{textValue(content.transcript_label) || 'Transcript'}</span>
+                    )}
+                    {textValue(content.primary_url) && (
+                        <span>{textValue(content.primary_label) || 'Learn more'}</span>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ImageTextPreview({
+    content,
+    label,
+    variant,
+}: {
+    content: SectionContent;
+    label: string;
+    variant: string;
+}) {
+    const imageId = textValue(content.image_id);
+    const imageLeft =
+        variant === 'image-left' || (variant === 'default' && textValue(content.image_position) === 'left');
+    const stacked = variant === 'stacked';
+    const imageSize = textValue(content.image_size);
+    const availableActions: Array<[string, string, boolean]> = [
+        [textValue(content.primary_label), textValue(content.primary_url), true],
+        [textValue(content.secondary_label), textValue(content.secondary_url), false],
+    ];
+    const actions = availableActions.filter(([buttonLabel, url]) => buttonLabel !== '' && url !== '');
+
+    return (
+        <div
+            className={cn(
+                'grid items-center gap-6',
+                imageId && !stacked && 'sm:grid-cols-2',
+                imageId &&
+                    !stacked &&
+                    imageSize === 'compact' &&
+                    (imageLeft ? 'sm:grid-cols-[0.7fr_1.5fr]' : 'sm:grid-cols-[1.5fr_0.7fr]'),
+                imageId &&
+                    !stacked &&
+                    imageSize === 'large' &&
+                    (imageLeft ? 'sm:grid-cols-[1.2fr_0.8fr]' : 'sm:grid-cols-[0.8fr_1.2fr]'),
+            )}
+        >
+            <div className={cn(imageLeft && !stacked && 'sm:order-2')}>
+                {textValue(content.eyebrow) && (
+                    <p className="mb-2 text-[10px] font-bold tracking-widest text-[var(--theme-accent)] uppercase">
+                        {textValue(content.eyebrow)}
+                    </p>
+                )}
+                <h2 className="text-xl font-bold text-[var(--theme-heading)] sm:text-3xl">
+                    {textValue(content.heading) || label}
+                </h2>
+                {textValue(content.description) && (
+                    <p className="mt-3 text-sm leading-6 opacity-80">{textValue(content.description)}</p>
+                )}
+                {textValue(content.body) && (
+                    <p className="mt-3 line-clamp-4 text-xs leading-5 opacity-70">
+                        {htmlText(textValue(content.body))}
+                    </p>
+                )}
+                {actions.length > 0 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {actions.map(([buttonLabel, , primary], index) => (
+                            <span
+                                key={index}
+                                className={cn(
+                                    'rounded-[var(--theme-radius)] px-3 py-2 text-[10px] font-bold',
+                                    primary
+                                        ? 'bg-[var(--theme-accent)] text-white'
+                                        : 'border border-[var(--theme-border)]',
+                                )}
+                            >
+                                {buttonLabel}
+                            </span>
+                        ))}
+                    </div>
+                )}
+                {textValue(content.supporting_text) && (
+                    <p className="mt-3 text-[10px] opacity-60">{textValue(content.supporting_text)}</p>
+                )}
+            </div>
+            {imageId && (
+                <figure className={cn((imageLeft || stacked) && 'sm:order-1')}>
+                    <img
+                        src={`/media/${imageId}/medium`}
+                        alt={textValue(content.image_alt)}
+                        className={cn(
+                            'w-full rounded-[var(--theme-radius)]',
+                            textValue(content.image_ratio) === 'square'
+                                ? 'aspect-square'
+                                : textValue(content.image_ratio) === 'portrait'
+                                  ? 'aspect-[3/4]'
+                                  : 'aspect-[4/3]',
+                            textValue(content.image_fit) === 'contain' ? 'object-contain' : 'object-cover',
+                        )}
+                    />
+                    {textValue(content.show_image_caption) !== '0' && textValue(content.image_caption) && (
+                        <figcaption className="mt-2 text-[10px] opacity-60">
+                            {textValue(content.image_caption)}
+                        </figcaption>
+                    )}
+                </figure>
+            )}
+        </div>
+    );
+}
+
+function RichTextPreview({
+    content,
+    label,
+    variant,
+}: {
+    content: SectionContent;
+    label: string;
+    variant: string;
+}) {
     const imageId = textValue(content.image_id);
     const imageLeft = textValue(content.image_position) === 'left';
     return (
-        <div className={cn('grid items-center gap-6', imageId && 'sm:grid-cols-2')}>
+        <div
+            className={cn(
+                'grid items-center gap-6',
+                imageId && 'sm:grid-cols-2',
+                imageId &&
+                    textValue(content.image_size) === 'compact' &&
+                    (imageLeft ? 'sm:grid-cols-[0.7fr_1.5fr]' : 'sm:grid-cols-[1.5fr_0.7fr]'),
+                imageId &&
+                    textValue(content.image_size) === 'large' &&
+                    (imageLeft ? 'sm:grid-cols-[1.2fr_0.8fr]' : 'sm:grid-cols-[0.8fr_1.2fr]'),
+                variant === 'narrow' && 'mx-auto max-w-2xl',
+                variant === 'wide' && 'max-w-none',
+            )}
+        >
             <div className={cn(imageLeft && imageId && 'sm:order-2')}>
                 {textValue(content.eyebrow) && (
                     <p className="mb-2 text-[10px] font-bold tracking-widest text-[var(--theme-accent)] uppercase">
@@ -2695,19 +3175,41 @@ function RichTextPreview({ content, label }: { content: SectionContent; label: s
                 <h2 className="text-xl font-bold text-[var(--theme-heading)] sm:text-3xl">
                     {textValue(content.heading) || label}
                 </h2>
+                {textValue(content.introduction) && (
+                    <p className="mt-3 text-sm leading-6 font-medium opacity-90">
+                        {textValue(content.introduction)}
+                    </p>
+                )}
                 <p className="mt-3 line-clamp-5 text-sm leading-6 opacity-80">
                     {htmlText(textValue(content.body) || textValue(content.description))}
                 </p>
+                {textValue(content.primary_label) && textValue(content.primary_url) && (
+                    <span className="mt-4 inline-block rounded-[var(--theme-radius)] bg-[var(--theme-accent)] px-3 py-2 text-[10px] font-bold text-white">
+                        {textValue(content.primary_label)}
+                    </span>
+                )}
             </div>
             {imageId && (
-                <img
-                    src={`/media/${imageId}/medium`}
-                    alt={textValue(content.image_alt)}
-                    className={cn(
-                        'aspect-[4/3] w-full rounded-[var(--theme-radius)] object-cover',
-                        imageLeft && 'sm:order-1',
+                <figure className={cn(imageLeft && 'sm:order-1')}>
+                    <img
+                        src={`/media/${imageId}/medium`}
+                        alt={textValue(content.image_alt)}
+                        className={cn(
+                            'w-full rounded-[var(--theme-radius)]',
+                            textValue(content.image_ratio) === 'square'
+                                ? 'aspect-square'
+                                : textValue(content.image_ratio) === 'portrait'
+                                  ? 'aspect-[3/4]'
+                                  : 'aspect-[4/3]',
+                            textValue(content.image_fit) === 'contain' ? 'object-contain' : 'object-cover',
+                        )}
+                    />
+                    {textValue(content.show_image_caption) !== '0' && textValue(content.image_caption) && (
+                        <figcaption className="mt-2 text-[10px] opacity-60">
+                            {textValue(content.image_caption)}
+                        </figcaption>
                     )}
-                />
+                </figure>
             )}
         </div>
     );
@@ -2718,6 +3220,7 @@ function textValue(
         | string
         | HeroSlide[]
         | CounterItem[]
+        | StatisticItem[]
         | BrandLogo[]
         | FeatureItem[]
         | ProcessItem[]

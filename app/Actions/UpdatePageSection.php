@@ -94,15 +94,28 @@ class UpdatePageSection
             $ids = collect($logos)->map(fn (mixed $logo): mixed => is_array($logo) ? ($logo['image_id'] ?? null) : null);
             $usageField = 'brand_carousel_logos';
             $errorKey = 'content.logos';
+        } elseif ($section->type === 'logo-cloud') {
+            $logos = is_array($content['logos'] ?? null) ? $content['logos'] : [];
+            $ids = collect($logos)->map(fn (mixed $logo): mixed => is_array($logo) ? ($logo['image_id'] ?? null) : null);
+            $usageField = 'logo_cloud_logos';
+            $errorKey = 'content.logos';
         } elseif ($section->type === 'hero-slider') {
             $slides = is_array($content['slides'] ?? null) ? $content['slides'] : [];
             $ids = collect($slides)->flatMap(fn (mixed $slide): array => is_array($slide) ? [$slide['image_id'] ?? null, $slide['mobile_image_id'] ?? null] : []);
             $usageField = 'hero_slider';
             $errorKey = 'content.slides';
         } elseif ($section->type === 'rich-text') {
-            $ids = collect([$content['image_id'] ?? null]);
+            $ids = collect([$content['image_id'] ?? null, $content['mobile_image_id'] ?? null]);
             $usageField = 'rich_text_image';
             $errorKey = 'content.image_id';
+        } elseif ($section->type === 'image-text') {
+            $ids = collect([$content['image_id'] ?? null, $content['mobile_image_id'] ?? null]);
+            $usageField = 'image_text_images';
+            $errorKey = 'content.image_id';
+        } elseif ($section->type === 'video') {
+            $ids = collect([$content['poster_image_id'] ?? null]);
+            $usageField = 'video_poster';
+            $errorKey = 'content.poster_image_id';
         } else {
             return [[], null];
         }

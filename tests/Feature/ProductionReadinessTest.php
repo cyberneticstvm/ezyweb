@@ -20,6 +20,8 @@ it('adds correlation and browser security headers without leaking an invalid ups
         ->toContain("default-src 'self'")
         ->toContain("object-src 'none'")
         ->toContain("frame-ancestors 'self'")
+        ->toContain('frame-src https://challenges.cloudflare.com https://www.google.com https://maps.google.com https://www.youtube-nocookie.com https://player.vimeo.com')
+        ->toContain("media-src 'self' https://storage.googleapis.com")
         ->toMatch("/script-src 'self' 'nonce-[a-f0-9]{32}'/")
         ->and($response->getContent())
         ->toMatch('/<script nonce="[a-f0-9]{32}" data-page="app" type="application\/json">/');

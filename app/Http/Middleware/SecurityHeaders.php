@@ -55,7 +55,8 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline'",
             "script-src 'self' 'nonce-{$nonce}' https://challenges.cloudflare.com https://www.googletagmanager.com",
             "connect-src 'self' https://challenges.cloudflare.com https://www.google-analytics.com",
-            'frame-src https://challenges.cloudflare.com https://www.google.com https://maps.google.com',
+            'frame-src https://challenges.cloudflare.com https://www.google.com https://maps.google.com https://www.youtube-nocookie.com https://player.vimeo.com',
+            "media-src 'self' https://storage.googleapis.com",
         ];
 
         if (app()->environment('production')) {

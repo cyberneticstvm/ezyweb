@@ -462,6 +462,87 @@ it('renders managed client and project counters with accessible animation data',
         ->assertDontSee('site-card-grid', false);
 });
 
+it('renders a configurable accessible divider and a whitespace-only spacer', function () {
+    [$hostname, $website, $home] = publicWebsite();
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'spacer-divider', 'variant' => 'line',
+        'content' => [
+            'heading' => 'Internal break label', 'space_before' => '16', 'space_after' => '96',
+            'line_label' => 'Next chapter', 'line_width' => 'medium', 'line_weight' => '3',
+            'line_style' => 'dashed', 'line_color' => 'accent',
+        ],
+    ]);
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'spacer-divider', 'variant' => 'space',
+        'content' => [
+            'heading' => 'Hidden internal label', 'space_before' => '32', 'space_after' => '64',
+            'line_label' => 'Do not show this line', 'line_width' => 'full', 'line_weight' => '1',
+            'line_style' => 'solid', 'line_color' => 'border',
+        ],
+    ]);
+
+    freezePublishedWebsite($website);
+    $response = $this->get("http://{$hostname}/")->assertOk()
+        ->assertSee('site-divider-managed variant-line width-medium style-dashed color-accent', false)
+        ->assertSee('--divider-before: 16px; --divider-after: 96px; --divider-weight: 3px;', false)
+        ->assertSee('role="separator"', false)
+        ->assertSee('aria-label="Next chapter"', false)
+        ->assertSee('Next chapter')
+        ->assertSee('site-divider-managed variant-space', false)
+        ->assertSee('--divider-before: 32px; --divider-after: 64px;', false)
+        ->assertDontSee('Internal break label')
+        ->assertDontSee('Hidden internal label')
+        ->assertDontSee('Do not show this line')
+        ->assertDontSee('site-card-grid', false);
+    expect(substr_count($response->getContent(), 'role="separator"'))->toBe(1);
+});
+
+it('renders accessible statistics with decimals sources comparison and split layout', function () {
+    [$hostname, $website, $home] = publicWebsite();
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'statistics', 'variant' => 'split',
+        'content' => [
+            'eyebrow' => 'Evidence', 'heading' => 'Results in numbers',
+            'description' => 'Verified outcomes.',
+            'stats' => [
+                ['value' => '12345.50', 'prefix' => '₹', 'suffix' => '+', 'label' => 'Revenue', 'description' => 'Annual client impact', 'trend_text' => '12% year over year', 'trend_direction' => 'up', 'source_label' => 'Annual report', 'source_url' => '/reports/2025'],
+                ['value' => '98.7', 'prefix' => '', 'suffix' => '%', 'label' => 'Satisfaction', 'description' => 'Customer survey', 'trend_text' => '', 'trend_direction' => 'neutral', 'source_label' => 'Client survey', 'source_url' => ''],
+            ],
+            'stats_columns' => '3', 'highlight_first' => '1', 'show_descriptions' => '1',
+            'show_trends' => '1', 'show_sources' => '1', 'animate' => '1',
+            'duration' => '3', 'use_grouping' => '1',
+        ],
+    ]);
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'statistics', 'variant' => 'cards',
+        'content' => ['heading' => 'No measured results yet', 'stats' => []],
+    ]);
+
+    freezePublishedWebsite($website);
+    $this->get("http://{$hostname}/")
+        ->assertOk()
+        ->assertSee('Results in numbers')
+        ->assertSee('12,345.50')
+        ->assertSee('98.7%')
+        ->assertSee('aria-label="₹12,345.50+ Revenue"', false)
+        ->assertSee('data-decimals="2"', false)
+        ->assertSee('data-value="12345.50"', false)
+        ->assertSee('data-animate="true"', false)
+        ->assertSee('data-duration="3000"', false)
+        ->assertSee('Annual client impact')
+        ->assertSee('12% year over year')
+        ->assertSee('href="/reports/2025"', false)
+        ->assertSee('Source: Annual report')
+        ->assertSee('variant-split', false)
+        ->assertSee('is-highlighted', false)
+        ->assertSee('No measured results yet')
+        ->assertDontSee('site-card-grid', false);
+});
+
 it('renders a managed accessible brand and partner carousel', function () {
     [$hostname, $website, $home] = publicWebsite();
     $first = (string) Str::ulid();
@@ -500,6 +581,48 @@ it('renders a managed accessible brand and partner carousel', function () {
         ->assertSee('data-brand-next', false)
         ->assertSee('is-grayscale', false)
         ->assertDontSee('site-card-grid', false);
+});
+
+it('renders a managed static logo cloud without placeholder cards', function () {
+    [$hostname, $website, $home] = publicWebsite();
+    $first = (string) Str::ulid();
+    $second = (string) Str::ulid();
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'logo-cloud', 'variant' => 'grid',
+        'content' => [
+            'eyebrow' => 'Trusted by', 'heading' => 'Our client logos',
+            'description' => 'Organisations that work with us.',
+            'logos' => [
+                ['image_id' => $first, 'name' => 'Alpha Co', 'alt' => 'Alpha logo', 'url' => 'https://alpha.example'],
+                ['image_id' => $second, 'name' => 'Beta Co', 'alt' => 'Beta logo', 'url' => '/partners/beta'],
+            ],
+            'logo_columns' => '5', 'logo_size' => 'large', 'logo_spacing' => 'loose',
+            'show_cards' => '1', 'show_names' => '1', 'grayscale' => '1', 'open_new_tab' => '1',
+        ],
+    ]);
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'logo-cloud', 'variant' => 'band',
+        'content' => ['heading' => 'Empty logo cloud', 'logos' => []],
+    ]);
+
+    freezePublishedWebsite($website);
+    $this->get("http://{$hostname}/")
+        ->assertOk()
+        ->assertSee('Our client logos')
+        ->assertSee('Organisations that work with us.')
+        ->assertSee('Alpha Co')
+        ->assertSee('Beta Co')
+        ->assertSee('/media/'.$first.'/medium', false)
+        ->assertSee('/media/'.$second.'/small', false)
+        ->assertSee('href="https://alpha.example"', false)
+        ->assertSee('target="_blank" rel="noopener noreferrer"', false)
+        ->assertSee('variant-grid size-large spacing-loose has-cards is-grayscale', false)
+        ->assertSee('--logo-columns: 5', false)
+        ->assertSee('Empty logo cloud')
+        ->assertDontSee('site-card-grid', false)
+        ->assertDontSee('data-brand-carousel', false);
 });
 
 it('renders a managed product catalogue from the immutable product snapshot', function () {
@@ -1027,9 +1150,118 @@ it('renders a responsive accessible hero image slider from the published snapsho
         ->assertSee('Team collaborating');
 });
 
+it('renders a click-to-load video embed with a safe fallback link from the published snapshot', function () {
+    [$hostname, $website, $home] = publicWebsite();
+    $poster = (string) Str::ulid();
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'video', 'variant' => 'contained',
+        'content' => [
+            'heading' => 'Watch our story', 'description' => 'See the team at work.',
+            'video_url' => 'https://youtu.be/dQw4w9WgXcQ', 'video_title' => 'Our story film',
+            'poster_image_id' => $poster, 'poster_alt' => 'People working together',
+            'video_caption' => 'Behind the scenes', 'show_caption' => '1', 'aspect_ratio' => 'standard',
+            'transcript_url' => '/story-transcript', 'transcript_label' => 'Read transcript',
+        ],
+    ]);
+
+    freezePublishedWebsite($website);
+    $this->get("http://{$hostname}/")
+        ->assertOk()
+        ->assertSee('Watch our story')
+        ->assertSee('See the team at work.')
+        ->assertSee('href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"', false)
+        ->assertSee('data-video-embed', false)
+        ->assertSee('data-video-provider="youtube"', false)
+        ->assertSee('data-video-id="dQw4w9WgXcQ"', false)
+        ->assertSee('Play video · loads YouTube')
+        ->assertSee('target="_blank" rel="noopener noreferrer"', false)
+        ->assertSee('/media/'.$poster.'/large', false)
+        ->assertSee('People working together')
+        ->assertSee('Behind the scenes')
+        ->assertSee('href="/story-transcript"', false)
+        ->assertSee('ratio-standard', false)
+        ->assertDontSee('<iframe', false);
+});
+
+it('renders native playback controls for a public GCS video file', function () {
+    [$hostname, $website, $home] = publicWebsite();
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'video', 'variant' => 'full-width',
+        'content' => [
+            'heading' => 'Product demonstration',
+            'video_url' => 'https://storage.googleapis.com/public-bucket/demo.mp4',
+            'video_title' => 'Product demo', 'autoplay' => '1', 'muted' => '0',
+            'loop' => '1', 'show_controls' => '1',
+        ],
+    ]);
+
+    freezePublishedWebsite($website);
+    $this->get("http://{$hostname}/")
+        ->assertOk()
+        ->assertSee('<video', false)
+        ->assertSee('src="https://storage.googleapis.com/public-bucket/demo.mp4"', false)
+        ->assertSee('aria-label="Product demo"', false)
+        ->assertSee('autoplay', false)
+        ->assertSee('muted', false)
+        ->assertSee('loop', false)
+        ->assertSee('controls', false)
+        ->assertDontSee('data-video-embed', false);
+});
+
+it('renders managed image and text with responsive media rich copy and safe actions', function () {
+    [$hostname, $website, $home] = publicWebsite();
+    $desktop = (string) Str::ulid();
+    $mobile = (string) Str::ulid();
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'image-text', 'variant' => 'image-left',
+        'content' => [
+            'eyebrow' => 'Our process', 'heading' => 'A real visual story',
+            'description' => 'Thoughtful introductory copy.',
+            'body' => '<p>More <strong>depth and detail</strong> for visitors.</p>',
+            'primary_label' => 'See our work', 'primary_url' => '/portfolio', 'primary_new_tab' => '1',
+            'secondary_label' => 'Talk to us', 'secondary_url' => '#contact',
+            'supporting_text' => 'We are happy to help.',
+            'image_id' => $desktop, 'mobile_image_id' => $mobile,
+            'image_alt' => 'Team collaborating', 'image_caption' => 'Our team at work',
+            'image_fit' => 'contain', 'image_ratio' => 'portrait', 'image_size' => 'compact',
+            'show_image_caption' => '1',
+        ],
+    ]);
+    PageSection::factory()->create([
+        'tenant_id' => $website->tenant_id, 'website_id' => $website->getKey(),
+        'page_id' => $home->getKey(), 'type' => 'image-text', 'variant' => 'default',
+        'content' => ['heading' => 'Legacy text without an image', 'description' => 'Still readable without placeholder art.'],
+    ]);
+
+    freezePublishedWebsite($website);
+    $this->get("http://{$hostname}/")
+        ->assertOk()
+        ->assertSee('A real visual story')
+        ->assertSee('Thoughtful introductory copy.')
+        ->assertSee('<strong>depth and detail</strong>', false)
+        ->assertSee('/media/'.$desktop.'/large', false)
+        ->assertSee('/media/'.$mobile.'/medium', false)
+        ->assertSee('image-left', false)
+        ->assertSee('fit-contain', false)
+        ->assertSee('ratio-portrait', false)
+        ->assertSee('image-size-compact', false)
+        ->assertSee('Team collaborating')
+        ->assertSee('Our team at work')
+        ->assertSee('href="/portfolio"', false)
+        ->assertSee('target="_blank" rel="noopener noreferrer"', false)
+        ->assertSee('href="#contact"', false)
+        ->assertSee('We are happy to help.')
+        ->assertSee('Legacy text without an image')
+        ->assertDontSee('site-content-art', false);
+});
+
 it('renders formatted rich text with an optional positioned image instead of placeholder art', function () {
     [$hostname, $website, $home] = publicWebsite();
     $image = (string) Str::ulid();
+    $mobileImage = (string) Str::ulid();
     PageSection::factory()->create([
         'tenant_id' => $website->tenant_id,
         'website_id' => $website->getKey(),
@@ -1038,9 +1270,13 @@ it('renders formatted rich text with an optional positioned image instead of pla
         'variant' => 'wide',
         'content' => [
             'eyebrow' => 'About Ezyweb', 'heading' => 'Content with a real image',
+            'introduction' => 'An introduction before the detailed content.',
             'body' => '<p>Rich <strong>formatted content</strong> for visitors.</p>',
-            'image_id' => $image, 'image_alt' => 'Team discussion', 'image_caption' => 'Planning together',
-            'image_position' => 'left',
+            'primary_label' => 'Learn more', 'primary_url' => '/about', 'primary_new_tab' => '1',
+            'image_id' => $image, 'mobile_image_id' => $mobileImage,
+            'image_alt' => 'Team discussion', 'image_caption' => 'Planning together',
+            'image_position' => 'left', 'image_fit' => 'contain', 'image_ratio' => 'square',
+            'image_size' => 'large', 'show_image_caption' => '1',
         ],
     ]);
 
@@ -1048,9 +1284,17 @@ it('renders formatted rich text with an optional positioned image instead of pla
     $this->get("http://{$hostname}/")
         ->assertOk()
         ->assertSee('Content with a real image')
+        ->assertSee('An introduction before the detailed content.')
         ->assertSee('<strong>formatted content</strong>', false)
         ->assertSee('/media/'.$image.'/large', false)
+        ->assertSee('/media/'.$mobileImage.'/medium', false)
         ->assertSee('image-left', false)
+        ->assertSee('image-size-large', false)
+        ->assertSee('fit-contain', false)
+        ->assertSee('ratio-square', false)
+        ->assertSee('Learn more')
+        ->assertSee('href="/about"', false)
+        ->assertSee('target="_blank" rel="noopener noreferrer"', false)
         ->assertSee('Team discussion')
         ->assertSee('Planning together')
         ->assertDontSee('site-content-art', false);

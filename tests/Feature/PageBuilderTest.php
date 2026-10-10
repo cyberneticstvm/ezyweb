@@ -527,6 +527,78 @@ it('manages client and project counters with formatting and animation controls',
         ->assertSessionHasErrors('content.items.0.value');
 });
 
+it('manages spacer and divider spacing labels and line appearance safely', function () {
+    [$user, , $page] = pageBuilderWorkspace();
+    $this->actingAs($user)->post('/dashboard/builder/sections', ['page_id' => $page->getKey(), 'type' => 'spacer-divider'])->assertRedirect();
+    $section = PageSection::query()->withoutGlobalScopes()->where('type', 'spacer-divider')->firstOrFail();
+    expect($section->content)->toMatchArray(['space_before' => '48', 'space_after' => '48', 'line_width' => 'full']);
+
+    $payload = [
+        'variant' => 'line', 'anchor' => 'next-chapter',
+        'content' => [
+            'heading' => '<b>Section break</b>', 'space_before' => '16', 'space_after' => '96',
+            'line_label' => '<script>bad()</script>Next chapter', 'line_width' => 'medium',
+            'line_weight' => '3', 'line_style' => 'dashed', 'line_color' => 'accent',
+        ],
+        'design_settings' => ['surface' => 'muted', 'spacing' => 'normal', 'alignment' => 'right'],
+        'is_enabled' => true, 'show_on_desktop' => true, 'show_on_tablet' => true, 'show_on_mobile' => true,
+    ];
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content)->toMatchArray([
+        'heading' => 'Section break', 'space_before' => '16', 'space_after' => '96',
+        'line_label' => 'bad()Next chapter', 'line_width' => 'medium', 'line_weight' => '3',
+        'line_style' => 'dashed', 'line_color' => 'accent',
+    ]);
+
+    $payload['content']['space_before'] = '999';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertSessionHasErrors('content.space_before');
+    $payload['content']['space_before'] = '16';
+    $payload['content']['line_color'] = 'url(evil)';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertSessionHasErrors('content.line_color');
+});
+
+it('manages decimal statistics source notes comparisons and display controls', function () {
+    [$user, , $page] = pageBuilderWorkspace();
+
+    $this->actingAs($user)->post('/dashboard/builder/sections', ['page_id' => $page->getKey(), 'type' => 'statistics'])->assertRedirect();
+    $section = PageSection::query()->withoutGlobalScopes()->where('type', 'statistics')->firstOrFail();
+    expect($section->content['stats'])->toBe([]);
+
+    $payload = [
+        'variant' => 'split', 'anchor' => 'our-results',
+        'content' => [
+            'eyebrow' => '<b>Evidence</b>', 'heading' => '<i>Results in numbers</i>',
+            'description' => '<script>bad()</script>Verified outcomes.',
+            'stats' => [
+                ['value' => '12345.50', 'prefix' => '₹', 'suffix' => '+', 'label' => '<b>Revenue</b>', 'description' => '<i>Annual client impact</i>', 'trend_text' => '<b>12% year over year</b>', 'trend_direction' => 'up', 'source_label' => '<i>Annual report</i>', 'source_url' => '/reports/2025'],
+                ['value' => '98.7', 'prefix' => '', 'suffix' => '%', 'label' => 'Satisfaction', 'description' => 'Customer survey', 'trend_text' => 'Stable', 'trend_direction' => 'neutral', 'source_label' => 'Client survey', 'source_url' => 'https://example.com/survey'],
+            ],
+            'stats_columns' => '3', 'highlight_first' => true, 'show_descriptions' => true,
+            'show_trends' => true, 'show_sources' => true, 'animate' => false,
+            'duration' => 4, 'use_grouping' => true,
+        ],
+        'design_settings' => ['surface' => 'muted', 'spacing' => 'normal', 'alignment' => 'left'],
+        'is_enabled' => true, 'show_on_desktop' => true, 'show_on_tablet' => true, 'show_on_mobile' => true,
+    ];
+
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content)->toMatchArray([
+        'eyebrow' => 'Evidence', 'heading' => 'Results in numbers', 'description' => 'bad()Verified outcomes.',
+        'stats_columns' => '3', 'highlight_first' => '1', 'animate' => '0', 'duration' => '4',
+    ]);
+    expect($section->fresh()?->content['stats'])->toHaveCount(2)
+        ->and($section->fresh()?->content['stats'][0])->toMatchArray([
+            'value' => '12345.50', 'prefix' => '₹', 'label' => 'Revenue', 'description' => 'Annual client impact',
+            'trend_text' => '12% year over year', 'trend_direction' => 'up', 'source_label' => 'Annual report', 'source_url' => '/reports/2025',
+        ]);
+
+    $payload['content']['stats'][0]['value'] = '12.345';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertSessionHasErrors('content.stats.0.value');
+    $payload['content']['stats'][0]['value'] = '12345.50';
+    $payload['content']['stats'][0]['trend_direction'] = 'sideways';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertSessionHasErrors('content.stats.0.trend_direction');
+});
+
 it('manages tenant scoped brand and partner logos with carousel controls', function () {
     [$user, $website, $page] = pageBuilderWorkspace();
     $first = sliderMedia($website, 'First partner');
@@ -569,6 +641,49 @@ it('manages tenant scoped brand and partner logos with carousel controls', funct
     $payload['content']['logos'][0]['image_id'] = $foreign->public_id;
     $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)
         ->assertSessionHasErrors('content.logos');
+});
+
+it('manages a tenant scoped logo cloud with layout and display controls', function () {
+    [$user, $website, $page] = pageBuilderWorkspace();
+    $first = sliderMedia($website, 'First client logo');
+    $second = sliderMedia($website, 'Second client logo');
+    [, $foreignWebsite] = pageBuilderWorkspace();
+    $foreign = sliderMedia($foreignWebsite, 'Foreign client logo');
+
+    $this->actingAs($user)->post('/dashboard/builder/sections', ['page_id' => $page->getKey(), 'type' => 'logo-cloud'])->assertRedirect();
+    $section = PageSection::query()->withoutGlobalScopes()->where('type', 'logo-cloud')->firstOrFail();
+    $payload = [
+        'variant' => 'grid', 'anchor' => 'clients',
+        'content' => [
+            'eyebrow' => '<b>Trusted by</b>', 'heading' => '<i>Our clients</i>',
+            'description' => '<script>bad()</script>Companies we have helped.',
+            'logos' => [
+                ['image_id' => $first->public_id, 'name' => '<b>Alpha</b>', 'alt' => '<i>Alpha logo</i>', 'url' => 'https://alpha.example'],
+                ['image_id' => $second->public_id, 'name' => 'Beta', 'alt' => 'Beta logo', 'url' => '/partners/beta'],
+            ],
+            'logo_columns' => '5', 'logo_size' => 'large', 'logo_spacing' => 'loose',
+            'show_cards' => true, 'show_names' => true, 'grayscale' => true, 'open_new_tab' => true,
+        ],
+        'design_settings' => ['surface' => 'muted', 'spacing' => 'normal', 'alignment' => 'center'],
+        'is_enabled' => true, 'show_on_desktop' => true, 'show_on_tablet' => true, 'show_on_mobile' => true,
+    ];
+
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content)->toMatchArray([
+        'eyebrow' => 'Trusted by', 'heading' => 'Our clients', 'description' => 'bad()Companies we have helped.',
+        'logo_columns' => '5', 'logo_size' => 'large', 'logo_spacing' => 'loose',
+        'show_cards' => '1', 'show_names' => '1', 'grayscale' => '1', 'open_new_tab' => '1',
+    ]);
+    expect($section->fresh()?->content['logos'])->toHaveCount(2)
+        ->and($section->fresh()?->content['logos'][0])->toMatchArray(['image_id' => $first->public_id, 'name' => 'Alpha', 'alt' => 'Alpha logo', 'url' => 'https://alpha.example'])
+        ->and(MediaUsage::query()->where('usable_id', $section->getKey())->where('field', 'logo_cloud_logos')->count())->toBe(2);
+
+    $payload['content']['logos'][0]['image_id'] = $foreign->public_id;
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertSessionHasErrors('content.logos');
+
+    $payload['content']['logos'][0]['image_id'] = $first->public_id;
+    $payload['content']['logo_columns'] = '7';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertSessionHasErrors('content.logo_columns');
 });
 
 it('manages product catalogue selection sorting and presentation controls', function () {
@@ -1006,9 +1121,119 @@ it('manages tenant scoped hero slider images and normalizes every slide', functi
         ->assertSessionHasErrors('content.slides');
 });
 
+it('manages video links posters captions and tenant isolation', function () {
+    [$user, $website, $page] = pageBuilderWorkspace();
+    $poster = sliderMedia($website, 'Video poster');
+    [, $foreignWebsite] = pageBuilderWorkspace();
+    $foreign = sliderMedia($foreignWebsite, 'Foreign video poster');
+
+    $this->actingAs($user)->post('/dashboard/builder/sections', [
+        'page_id' => $page->getKey(), 'type' => 'video',
+    ])->assertRedirect();
+    $section = PageSection::query()->withoutGlobalScopes()->where('type', 'video')->firstOrFail();
+    $payload = [
+        'variant' => 'contained', 'anchor' => 'film',
+        'content' => [
+            'eyebrow' => '<b>Watch</b>', 'heading' => 'Our film', 'description' => 'A short introduction.',
+            'video_url' => 'https://youtu.be/dQw4w9WgXcQ?t=10', 'video_title' => 'Company film',
+            'video_caption' => 'How we work.', 'show_caption' => true,
+            'muted' => true, 'loop' => true, 'show_controls' => false,
+            'poster_image_id' => $poster->public_id, 'poster_alt' => 'Team in the studio',
+            'aspect_ratio' => 'wide', 'transcript_url' => '/transcript', 'transcript_label' => 'Read transcript',
+            'primary_label' => 'Contact us', 'primary_url' => '#contact', 'primary_new_tab' => false,
+        ],
+        'design_settings' => ['surface' => 'default', 'spacing' => 'normal', 'alignment' => 'left'],
+        'is_enabled' => true, 'show_on_desktop' => true, 'show_on_tablet' => true, 'show_on_mobile' => true,
+    ];
+
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content)->toMatchArray([
+        'video_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        'video_provider' => 'youtube', 'video_id' => 'dQw4w9WgXcQ',
+        'poster_image_id' => $poster->public_id, 'poster_alt' => 'Team in the studio',
+        'video_caption' => 'How we work.', 'transcript_url' => '/transcript',
+        'muted' => '1', 'loop' => '1', 'show_controls' => '0',
+    ]);
+    expect(MediaUsage::query()->where('usable_id', $section->getKey())->where('field', 'video_poster')->count())->toBe(1);
+
+    $payload['content']['poster_image_id'] = $foreign->public_id;
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)
+        ->assertSessionHasErrors('content.poster_image_id');
+
+    $payload['content']['poster_image_id'] = $poster->public_id;
+    $payload['content']['video_url'] = 'https://evil.example/watch?v=dQw4w9WgXcQ';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content['video_url'])->toBe('');
+
+    $payload['content']['video_url'] = 'https://vimeo.com/12345678';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content['video_provider'])->toBe('vimeo');
+
+    $payload['content']['video_url'] = 'https://storage.googleapis.com/public-bucket/film.mp4';
+    $payload['content']['autoplay'] = true;
+    $payload['content']['muted'] = false;
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content)->toMatchArray(['video_provider' => 'file', 'autoplay' => '1', 'muted' => '1', 'show_controls' => '1']);
+});
+
+it('manages image and text copy responsive media layout links and tenant isolation', function () {
+    [$user, $website, $page] = pageBuilderWorkspace();
+    $desktop = sliderMedia($website, 'Editorial desktop');
+    $mobile = sliderMedia($website, 'Editorial mobile');
+    [, $foreignWebsite] = pageBuilderWorkspace();
+    $foreign = sliderMedia($foreignWebsite, 'Foreign editorial image');
+
+    $this->actingAs($user)->post('/dashboard/builder/sections', [
+        'page_id' => $page->getKey(), 'type' => 'image-text',
+    ])->assertRedirect();
+    $section = PageSection::query()->withoutGlobalScopes()->where('type', 'image-text')->firstOrFail();
+    $payload = [
+        'variant' => 'image-left', 'anchor' => 'approach',
+        'content' => [
+            'eyebrow' => '<b>Our approach</b>', 'heading' => '<script>bad()</script>Designed for people',
+            'description' => '<i>Plain introduction.</i>',
+            'body' => '<p>Useful <strong>formatted copy</strong>.</p><script>alert(1)</script>',
+            'primary_label' => '<b>Explore</b>', 'primary_url' => '/work', 'primary_new_tab' => true,
+            'secondary_label' => '<i>Contact</i>', 'secondary_url' => '#contact', 'secondary_new_tab' => false,
+            'supporting_text' => '<b>No obligation.</b>',
+            'image_id' => $desktop->public_id, 'mobile_image_id' => $mobile->public_id,
+            'image_alt' => '<i>Team planning</i>', 'image_caption' => '<b>Working together</b>',
+            'image_position' => 'left', 'image_fit' => 'contain', 'image_ratio' => 'square',
+            'image_size' => 'large', 'show_image_caption' => false,
+        ],
+        'design_settings' => ['surface' => 'muted', 'spacing' => 'spacious', 'alignment' => 'left'],
+        'is_enabled' => true, 'show_on_desktop' => true, 'show_on_tablet' => true, 'show_on_mobile' => true,
+    ];
+
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content)->toMatchArray([
+        'eyebrow' => 'Our approach', 'heading' => 'bad()Designed for people',
+        'description' => 'Plain introduction.', 'primary_label' => 'Explore',
+        'primary_url' => '/work', 'primary_new_tab' => '1',
+        'secondary_label' => 'Contact', 'secondary_url' => '#contact',
+        'supporting_text' => 'No obligation.',
+        'image_id' => $desktop->public_id, 'mobile_image_id' => $mobile->public_id,
+        'image_alt' => 'Team planning', 'image_caption' => 'Working together',
+        'image_position' => 'left', 'image_fit' => 'contain', 'image_ratio' => 'square',
+        'image_size' => 'large', 'show_image_caption' => '0',
+    ]);
+    expect($section->fresh()?->content['body'])->toContain('<strong>formatted copy</strong>')->not->toContain('<script>');
+    expect(MediaUsage::query()->where('usable_id', $section->getKey())->where('field', 'image_text_images')->count())->toBe(2);
+
+    $payload['content']['mobile_image_id'] = $foreign->public_id;
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)
+        ->assertSessionHasErrors('content.image_id');
+
+    $payload['content']['mobile_image_id'] = $mobile->public_id;
+    $payload['content']['primary_url'] = 'javascript:alert(1)';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)->assertRedirect();
+    expect($section->fresh()?->content['primary_url'])->toBe('');
+});
+
 it('manages formatted rich text with an optional tenant scoped image', function () {
     [$user, $website, $page] = pageBuilderWorkspace();
     $image = sliderMedia($website, 'Rich text image');
+    $mobileImage = sliderMedia($website, 'Rich text mobile image');
     [, $foreignWebsite] = pageBuilderWorkspace();
     $foreign = sliderMedia($foreignWebsite, 'Foreign rich text image');
 
@@ -1018,9 +1243,14 @@ it('manages formatted rich text with an optional tenant scoped image', function 
         'variant' => 'wide', 'anchor' => 'our-story',
         'content' => [
             'eyebrow' => '<b>Our story</b>', 'heading' => '<script>bad()</script>A richer section',
+            'introduction' => '<i>A clear and readable introduction.</i>',
             'body' => '<p>Safe <strong>formatted</strong> copy.</p><script>alert(1)</script><a href="javascript:bad()">Unsafe</a>',
+            'primary_label' => '<b>Read more</b>', 'primary_url' => '/about', 'primary_new_tab' => true,
             'image_id' => $image->public_id, 'image_alt' => '<i>People collaborating</i>',
+            'mobile_image_id' => $mobileImage->public_id,
             'image_caption' => '<b>Our team at work</b>', 'image_position' => 'left',
+            'image_fit' => 'contain', 'image_ratio' => 'square', 'image_size' => 'large',
+            'show_image_caption' => false,
         ],
         'design_settings' => ['surface' => 'muted', 'spacing' => 'normal', 'alignment' => 'left'],
         'is_enabled' => true, 'show_on_desktop' => true, 'show_on_tablet' => true, 'show_on_mobile' => true,
@@ -1030,17 +1260,37 @@ it('manages formatted rich text with an optional tenant scoped image', function 
     $fresh = $section->fresh();
     expect($fresh?->content['eyebrow'])->toBe('Our story')
         ->and($fresh?->content['heading'])->toBe('bad()A richer section')
+        ->and($fresh?->content['introduction'])->toBe('A clear and readable introduction.')
         ->and($fresh?->content['body'])->toContain('<strong>formatted</strong>')
         ->and($fresh?->content['body'])->not->toContain('<script>')
         ->and($fresh?->content['body'])->not->toContain('javascript:')
         ->and($fresh?->content['image_alt'])->toBe('People collaborating')
+        ->and($fresh?->content['mobile_image_id'])->toBe($mobileImage->public_id)
         ->and($fresh?->content['image_caption'])->toBe('Our team at work')
         ->and($fresh?->content['image_position'])->toBe('left')
-        ->and(MediaUsage::query()->where('usable_id', $section->getKey())->where('field', 'rich_text_image')->count())->toBe(1);
+        ->and($fresh?->content['image_fit'])->toBe('contain')
+        ->and($fresh?->content['image_ratio'])->toBe('square')
+        ->and($fresh?->content['image_size'])->toBe('large')
+        ->and($fresh?->content['show_image_caption'])->toBe('0')
+        ->and($fresh?->content['primary_label'])->toBe('Read more')
+        ->and($fresh?->content['primary_url'])->toBe('/about')
+        ->and($fresh?->content['primary_new_tab'])->toBe('1')
+        ->and(MediaUsage::query()->where('usable_id', $section->getKey())->where('field', 'rich_text_image')->count())->toBe(2);
 
     $payload['content']['image_id'] = $foreign->public_id;
     $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)
         ->assertSessionHasErrors('content.image_id');
+
+    $payload['content']['image_id'] = $image->public_id;
+    $payload['content']['mobile_image_id'] = $foreign->public_id;
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)
+        ->assertSessionHasErrors('content.image_id');
+
+    $payload['content']['mobile_image_id'] = $mobileImage->public_id;
+    $payload['content']['primary_url'] = 'javascript:alert(1)';
+    $this->actingAs($user)->put('/dashboard/builder/sections/'.$section->getKey(), $payload)
+        ->assertRedirect();
+    expect($section->fresh()?->content['primary_url'])->toBe('');
 });
 
 it('reorders sections exactly and rejects cross page ids', function () {

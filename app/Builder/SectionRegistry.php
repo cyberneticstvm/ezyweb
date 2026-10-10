@@ -38,7 +38,7 @@ class SectionRegistry
             'map' => ['Map', 'Information', ['default', 'full-width', 'split']],
             'newsletter' => ['Newsletter', 'Conversion', ['default', 'inline', 'card']],
             'rich-text' => ['Rich text', 'Content', ['default', 'narrow', 'wide']],
-            'image-text' => ['Image and text', 'Content', ['default', 'image-left', 'image-right']],
+            'image-text' => ['Image and text', 'Content', ['default', 'image-left', 'image-right', 'stacked']],
             'video' => ['Video', 'Content', ['default', 'contained', 'full-width']],
             'logo-cloud' => ['Logo cloud', 'Trust', ['default', 'grid', 'band']],
             'statistics' => ['Statistics', 'Trust', ['default', 'cards', 'split']],
@@ -109,8 +109,14 @@ class SectionRegistry
         if ($type === 'counters') {
             return $this->normalizeCounters($content);
         }
+        if ($type === 'statistics') {
+            return $this->normalizeStatistics($content);
+        }
         if ($type === 'brand-carousel') {
             return $this->normalizeBrandCarousel($content);
+        }
+        if ($type === 'logo-cloud') {
+            return $this->normalizeLogoCloud($content);
         }
         if ($type === 'products') {
             return $this->normalizeProducts($content);
@@ -166,6 +172,15 @@ class SectionRegistry
         if ($type === 'rich-text') {
             return $this->normalizeRichText($content);
         }
+        if ($type === 'image-text') {
+            return $this->normalizeImageText($content);
+        }
+        if ($type === 'video') {
+            return $this->normalizeVideo($content);
+        }
+        if ($type === 'spacer-divider') {
+            return $this->normalizeSpacerDivider($content);
+        }
 
         $normalized = [];
         foreach ($this->get($type)['fields'] ?? [] as $field) {
@@ -198,7 +213,7 @@ class SectionRegistry
     private function fieldsFor(string $type): array
     {
         if ($type === 'spacer-divider') {
-            return [['key' => 'heading', 'label' => 'Internal label', 'type' => 'text', 'max' => 80]];
+            return [['key' => 'heading', 'label' => 'Internal label', 'type' => 'spacer-divider', 'max' => 80]];
         }
 
         if ($type === 'hero-slider') {
@@ -229,6 +244,12 @@ class SectionRegistry
         if ($type === 'rich-text') {
             return [['key' => 'body', 'label' => 'Content', 'type' => 'richtext', 'max' => 30000]];
         }
+        if ($type === 'image-text') {
+            return [['key' => 'body', 'label' => 'Image and text content', 'type' => 'image-text', 'max' => 30000]];
+        }
+        if ($type === 'video') {
+            return [['key' => 'video_url', 'label' => 'Video source', 'type' => 'video', 'max' => 2048]];
+        }
         if ($type === 'about') {
             return [['key' => 'body', 'label' => 'Story', 'type' => 'richtext', 'max' => 30000]];
         }
@@ -238,8 +259,14 @@ class SectionRegistry
         if ($type === 'counters') {
             return [['key' => 'items', 'label' => 'Counters', 'type' => 'counters', 'max' => 8]];
         }
+        if ($type === 'statistics') {
+            return [['key' => 'stats', 'label' => 'Statistics', 'type' => 'statistics', 'max' => 8]];
+        }
         if ($type === 'brand-carousel') {
             return [['key' => 'logos', 'label' => 'Brands or partners', 'type' => 'logos', 'max' => 20]];
+        }
+        if ($type === 'logo-cloud') {
+            return [['key' => 'logos', 'label' => 'Logo cloud', 'type' => 'logos', 'max' => 20]];
         }
         if ($type === 'products') {
             return [['key' => 'product_slugs', 'label' => 'Products', 'type' => 'products', 'max' => 50]];
@@ -424,8 +451,38 @@ class SectionRegistry
         if ($type === 'rich-text') {
             return [
                 'eyebrow' => '', 'heading' => 'Rich text',
+                'introduction' => '',
                 'body' => '<p>Use the editor to add formatted content for your visitors.</p>',
-                'image_id' => '', 'image_alt' => '', 'image_caption' => '', 'image_position' => 'right',
+                'primary_label' => '', 'primary_url' => '', 'primary_new_tab' => '0',
+                'image_id' => '', 'mobile_image_id' => '', 'image_alt' => '', 'image_caption' => '',
+                'image_position' => 'right', 'image_fit' => 'cover', 'image_ratio' => 'landscape',
+                'image_size' => 'balanced', 'show_image_caption' => '1',
+            ];
+        }
+        if ($type === 'image-text') {
+            return [
+                'eyebrow' => 'Our approach', 'heading' => 'Show what makes your work different',
+                'description' => 'Pair your message with a real image from your media library.',
+                'body' => '<p>Share the detail that helps visitors understand your business and take the next step.</p>',
+                'primary_label' => '', 'primary_url' => '', 'primary_new_tab' => '0',
+                'secondary_label' => '', 'secondary_url' => '', 'secondary_new_tab' => '0',
+                'supporting_text' => '',
+                'image_id' => '', 'mobile_image_id' => '', 'image_alt' => '', 'image_caption' => '',
+                'image_position' => 'right', 'image_fit' => 'cover', 'image_ratio' => 'landscape',
+                'image_size' => 'balanced', 'show_image_caption' => '1',
+            ];
+        }
+        if ($type === 'video') {
+            return [
+                'eyebrow' => 'Watch', 'heading' => 'See our story in motion',
+                'description' => 'Give visitors a clear reason to watch this video.',
+                'video_url' => '', 'video_provider' => '', 'video_id' => '',
+                'video_title' => 'Watch our video', 'video_caption' => '',
+                'poster_image_id' => '', 'poster_alt' => '',
+                'aspect_ratio' => 'wide', 'show_caption' => '1',
+                'autoplay' => '0', 'muted' => '0', 'loop' => '0', 'show_controls' => '1',
+                'transcript_url' => '', 'transcript_label' => 'Read transcript',
+                'primary_label' => '', 'primary_url' => '', 'primary_new_tab' => '0',
             ];
         }
         if ($type === 'about') {
@@ -463,6 +520,23 @@ class SectionRegistry
                 'animate' => '1', 'duration' => '2', 'use_grouping' => '1',
             ];
         }
+        if ($type === 'statistics') {
+            return [
+                'eyebrow' => 'By the numbers', 'heading' => 'Results you can measure',
+                'description' => 'Share verified figures that show the scale and impact of your work.',
+                'stats' => [], 'stats_columns' => '4', 'highlight_first' => '0',
+                'show_descriptions' => '1', 'show_trends' => '1', 'show_sources' => '1',
+                'animate' => '1', 'duration' => '2', 'use_grouping' => '1',
+            ];
+        }
+        if ($type === 'spacer-divider') {
+            return [
+                'heading' => 'Spacer or divider',
+                'space_before' => '48', 'space_after' => '48',
+                'line_label' => '', 'line_width' => 'full',
+                'line_weight' => '1', 'line_style' => 'solid', 'line_color' => 'border',
+            ];
+        }
         if ($type === 'brand-carousel') {
             return [
                 'eyebrow' => 'Trusted by', 'heading' => 'Brands and partners',
@@ -470,6 +544,15 @@ class SectionRegistry
                 'logos' => [],
                 'autoplay' => '1', 'interval' => '4', 'show_arrows' => '1',
                 'pause_on_hover' => '1', 'show_names' => '0', 'grayscale' => '0', 'open_new_tab' => '0',
+            ];
+        }
+        if ($type === 'logo-cloud') {
+            return [
+                'eyebrow' => 'Trusted by', 'heading' => 'In good company',
+                'description' => 'Showcase the clients, partners, or certifications that build confidence in your work.',
+                'logos' => [], 'logo_columns' => '4', 'logo_size' => 'standard',
+                'logo_spacing' => 'standard', 'show_cards' => '0',
+                'show_names' => '0', 'grayscale' => '0', 'open_new_tab' => '0',
             ];
         }
         if ($type === 'products') {
@@ -983,6 +1066,119 @@ class SectionRegistry
      * @param  array<string, mixed>  $content
      * @return array<string, string>
      */
+    private function normalizeVideo(array $content): array
+    {
+        $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
+        [$url, $provider, $videoId] = $this->videoSource($plain('video_url', 2048));
+        $autoplay = $this->flag($content['autoplay'] ?? '0');
+        $muted = $this->flag($content['muted'] ?? '0');
+
+        return [
+            'eyebrow' => $plain('eyebrow', 80),
+            'heading' => $plain('heading', 160),
+            'description' => $plain('description', 2000),
+            'video_url' => $url,
+            'video_provider' => $provider,
+            'video_id' => $videoId,
+            'video_title' => $plain('video_title', 160),
+            'video_caption' => $plain('video_caption', 500),
+            'poster_image_id' => $this->mediaId($plain('poster_image_id', 26)),
+            'poster_alt' => $plain('poster_alt', 255),
+            'aspect_ratio' => in_array($content['aspect_ratio'] ?? null, ['wide', 'standard', 'vertical'], true) ? $content['aspect_ratio'] : 'wide',
+            'show_caption' => $this->flag($content['show_caption'] ?? '1'),
+            'autoplay' => $autoplay,
+            'muted' => $autoplay === '1' ? '1' : $muted,
+            'loop' => $this->flag($content['loop'] ?? '0'),
+            'show_controls' => $provider === 'file' ? '1' : $this->flag($content['show_controls'] ?? '1'),
+            'transcript_url' => $this->safeUrl($plain('transcript_url', 2048)),
+            'transcript_label' => $plain('transcript_label', 60),
+            'primary_label' => $plain('primary_label', 60),
+            'primary_url' => $this->safeUrl($plain('primary_url', 2048)),
+            'primary_new_tab' => $this->flag($content['primary_new_tab'] ?? '0'),
+        ];
+    }
+
+    /** @return array{string, string, string} */
+    private function videoSource(string $value): array
+    {
+        if ($value === '' || filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return ['', '', ''];
+        }
+        $parts = parse_url($value);
+        if (! is_array($parts) || strtolower($parts['scheme'] ?? '') !== 'https' || ! isset($parts['host']) || isset($parts['port'])) {
+            return ['', '', ''];
+        }
+        if (isset($parts['user']) || isset($parts['pass'])) {
+            return ['', '', ''];
+        }
+
+        $host = strtolower($parts['host']);
+        $path = $parts['path'] ?? '';
+        if (in_array($host, ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'www.youtube-nocookie.com', 'youtu.be'], true)) {
+            $videoId = '';
+            if ($host === 'youtu.be' && preg_match('~^/([A-Za-z0-9_-]{11})/?$~', $path, $matches) === 1) {
+                $videoId = $matches[1];
+            } elseif ($path === '/watch') {
+                parse_str($parts['query'] ?? '', $query);
+                $videoId = is_string($query['v'] ?? null) ? $query['v'] : '';
+            } elseif (preg_match('~^/(?:embed|shorts)/([A-Za-z0-9_-]{11})/?$~', $path, $matches) === 1) {
+                $videoId = $matches[1];
+            }
+
+            return preg_match('/^[A-Za-z0-9_-]{11}$/', $videoId) === 1
+                ? ['https://www.youtube.com/watch?v='.$videoId, 'youtube', $videoId]
+                : ['', '', ''];
+        }
+        if (in_array($host, ['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'], true)) {
+            if (preg_match('~^/(?:video/)?([0-9]{1,20})/?$~', $path, $matches) === 1) {
+                return ['https://vimeo.com/'.$matches[1], 'vimeo', $matches[1]];
+            }
+
+            return ['', '', ''];
+        }
+        if ($host === 'storage.googleapis.com' && ! isset($parts['query']) && ! isset($parts['fragment']) && preg_match('/\.(?:mp4|webm|ogg)$/i', $path) === 1) {
+            return [$value, 'file', ''];
+        }
+
+        return ['', '', ''];
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, string>
+     */
+    private function normalizeImageText(array $content): array
+    {
+        $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
+
+        return [
+            'eyebrow' => $plain('eyebrow', 80),
+            'heading' => $plain('heading', 160),
+            'description' => $plain('description', 2000),
+            'body' => $this->richText->sanitize(mb_substr(is_string($content['body'] ?? null) ? $content['body'] : '', 0, 30000)),
+            'primary_label' => $plain('primary_label', 60),
+            'primary_url' => $this->safeUrl($plain('primary_url', 2048)),
+            'primary_new_tab' => $this->flag($content['primary_new_tab'] ?? '0'),
+            'secondary_label' => $plain('secondary_label', 60),
+            'secondary_url' => $this->safeUrl($plain('secondary_url', 2048)),
+            'secondary_new_tab' => $this->flag($content['secondary_new_tab'] ?? '0'),
+            'supporting_text' => $plain('supporting_text', 300),
+            'image_id' => $this->mediaId($plain('image_id', 26)),
+            'mobile_image_id' => $this->mediaId($plain('mobile_image_id', 26)),
+            'image_alt' => $plain('image_alt', 255),
+            'image_caption' => $plain('image_caption', 500),
+            'image_position' => in_array($content['image_position'] ?? null, ['left', 'right'], true) ? $content['image_position'] : 'right',
+            'image_fit' => in_array($content['image_fit'] ?? null, ['cover', 'contain'], true) ? $content['image_fit'] : 'cover',
+            'image_ratio' => in_array($content['image_ratio'] ?? null, ['landscape', 'square', 'portrait'], true) ? $content['image_ratio'] : 'landscape',
+            'image_size' => in_array($content['image_size'] ?? null, ['compact', 'balanced', 'large'], true) ? $content['image_size'] : 'balanced',
+            'show_image_caption' => $this->flag($content['show_image_caption'] ?? '1'),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, string>
+     */
     private function normalizeRichText(array $content): array
     {
         $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
@@ -993,11 +1189,20 @@ class SectionRegistry
         return [
             'eyebrow' => $plain('eyebrow', 80),
             'heading' => $plain('heading', 160),
+            'introduction' => $plain('introduction', 1000),
             'body' => $this->richText->sanitize(mb_substr($body, 0, 30000)),
+            'primary_label' => $plain('primary_label', 60),
+            'primary_url' => $this->safeUrl($plain('primary_url', 2048)),
+            'primary_new_tab' => $this->flag($content['primary_new_tab'] ?? '0'),
             'image_id' => $imageId,
+            'mobile_image_id' => $this->mediaId($plain('mobile_image_id', 26)),
             'image_alt' => $plain('image_alt', 255),
             'image_caption' => $plain('image_caption', 500),
             'image_position' => in_array($content['image_position'] ?? null, ['left', 'right'], true) ? $content['image_position'] : 'right',
+            'image_fit' => in_array($content['image_fit'] ?? null, ['cover', 'contain'], true) ? $content['image_fit'] : 'cover',
+            'image_ratio' => in_array($content['image_ratio'] ?? null, ['landscape', 'square', 'portrait'], true) ? $content['image_ratio'] : 'landscape',
+            'image_size' => in_array($content['image_size'] ?? null, ['compact', 'balanced', 'large'], true) ? $content['image_size'] : 'balanced',
+            'show_image_caption' => $this->flag($content['show_image_caption'] ?? '1'),
         ];
     }
 
@@ -1105,6 +1310,69 @@ class SectionRegistry
      * @param  array<string, mixed>  $content
      * @return array<string, mixed>
      */
+    private function normalizeStatistics(array $content): array
+    {
+        $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
+        $stats = is_array($content['stats'] ?? null) ? $content['stats'] : [];
+        $normalizedStats = collect($stats)->filter(fn (mixed $item): bool => is_array($item))->take(8)->map(function (array $item): array {
+            $text = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($item[$key] ?? null) ? $item[$key] : '')), $max, '');
+            $rawValue = is_scalar($item['value'] ?? null) ? trim((string) $item['value']) : '';
+            $value = preg_match('/^[0-9]{1,9}(?:\.[0-9]{1,2})?$/', $rawValue) === 1 ? $rawValue : '0';
+
+            return [
+                'value' => $value,
+                'prefix' => $text('prefix', 12),
+                'suffix' => $text('suffix', 12),
+                'label' => $text('label', 100),
+                'description' => $text('description', 300),
+                'trend_text' => $text('trend_text', 80),
+                'trend_direction' => in_array($item['trend_direction'] ?? null, ['up', 'down', 'neutral'], true) ? $item['trend_direction'] : 'neutral',
+                'source_label' => $text('source_label', 120),
+                'source_url' => $this->safeUrl($text('source_url', 2048)),
+            ];
+        })->filter(fn (array $item): bool => $item['label'] !== '')->values()->all();
+
+        return [
+            'eyebrow' => $plain('eyebrow', 80),
+            'heading' => $plain('heading', 160),
+            'description' => $plain('description', 1000),
+            'stats' => $normalizedStats,
+            'stats_columns' => in_array((string) ($content['stats_columns'] ?? ''), ['2', '3', '4'], true) ? (string) $content['stats_columns'] : '4',
+            'highlight_first' => $this->flag($content['highlight_first'] ?? '0'),
+            'show_descriptions' => $this->flag($content['show_descriptions'] ?? '1'),
+            'show_trends' => $this->flag($content['show_trends'] ?? '1'),
+            'show_sources' => $this->flag($content['show_sources'] ?? '1'),
+            'animate' => $this->flag($content['animate'] ?? '1'),
+            'duration' => (string) min(5, max(1, (int) ($content['duration'] ?? 2))),
+            'use_grouping' => $this->flag($content['use_grouping'] ?? '1'),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, string>
+     */
+    private function normalizeSpacerDivider(array $content): array
+    {
+        $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
+        $spacing = ['0', '16', '32', '48', '64', '96', '128'];
+
+        return [
+            'heading' => $plain('heading', 80),
+            'space_before' => in_array((string) ($content['space_before'] ?? ''), $spacing, true) ? (string) $content['space_before'] : '48',
+            'space_after' => in_array((string) ($content['space_after'] ?? ''), $spacing, true) ? (string) $content['space_after'] : '48',
+            'line_label' => $plain('line_label', 80),
+            'line_width' => in_array($content['line_width'] ?? null, ['narrow', 'medium', 'wide', 'full'], true) ? $content['line_width'] : 'full',
+            'line_weight' => in_array((string) ($content['line_weight'] ?? ''), ['1', '2', '3', '4'], true) ? (string) $content['line_weight'] : '1',
+            'line_style' => in_array($content['line_style'] ?? null, ['solid', 'dashed', 'dotted'], true) ? $content['line_style'] : 'solid',
+            'line_color' => in_array($content['line_color'] ?? null, ['border', 'primary', 'accent'], true) ? $content['line_color'] : 'border',
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
     private function normalizeBrandCarousel(array $content): array
     {
         $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
@@ -1129,6 +1397,30 @@ class SectionRegistry
             'interval' => (string) min(15, max(3, (int) ($content['interval'] ?? 4))),
             'show_arrows' => $this->flag($content['show_arrows'] ?? '1'),
             'pause_on_hover' => $this->flag($content['pause_on_hover'] ?? '1'),
+            'show_names' => $this->flag($content['show_names'] ?? '0'),
+            'grayscale' => $this->flag($content['grayscale'] ?? '0'),
+            'open_new_tab' => $this->flag($content['open_new_tab'] ?? '0'),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    private function normalizeLogoCloud(array $content): array
+    {
+        $plain = fn (string $key, int $max): string => Str::limit(trim(strip_tags(is_string($content[$key] ?? null) ? $content[$key] : '')), $max, '');
+        $logos = $this->normalizeBrandCarousel($content)['logos'];
+
+        return [
+            'eyebrow' => $plain('eyebrow', 80),
+            'heading' => $plain('heading', 160),
+            'description' => $plain('description', 1000),
+            'logos' => $logos,
+            'logo_columns' => in_array((string) ($content['logo_columns'] ?? ''), ['2', '3', '4', '5', '6'], true) ? (string) $content['logo_columns'] : '4',
+            'logo_size' => in_array($content['logo_size'] ?? null, ['compact', 'standard', 'large'], true) ? $content['logo_size'] : 'standard',
+            'logo_spacing' => in_array($content['logo_spacing'] ?? null, ['compact', 'standard', 'loose'], true) ? $content['logo_spacing'] : 'standard',
+            'show_cards' => $this->flag($content['show_cards'] ?? '0'),
             'show_names' => $this->flag($content['show_names'] ?? '0'),
             'grayscale' => $this->flag($content['grayscale'] ?? '0'),
             'open_new_tab' => $this->flag($content['open_new_tab'] ?? '0'),

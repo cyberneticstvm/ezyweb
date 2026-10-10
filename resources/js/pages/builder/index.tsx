@@ -44,6 +44,7 @@ import {
     type BrandLogo,
     type BuilderSection,
     type CounterItem,
+    type StatisticItem,
     type FeatureItem,
     type PricingItem,
     type ProcessItem,
@@ -727,6 +728,8 @@ function SectionEditor({
                     />
                 ) : section.type === 'counters' ? (
                     <CountersSectionEditor content={content} onChange={setContent} />
+                ) : section.type === 'statistics' ? (
+                    <StatisticsSectionEditor content={content} onChange={setContent} />
                 ) : section.type === 'features' ? (
                     <FeaturesSectionEditor
                         content={content}
@@ -748,6 +751,13 @@ function SectionEditor({
                         content={content}
                         mediaAssets={mediaAssets}
                         onChange={setContent}
+                    />
+                ) : section.type === 'logo-cloud' ? (
+                    <BrandCarouselSectionEditor
+                        content={content}
+                        mediaAssets={mediaAssets}
+                        onChange={setContent}
+                        mode="cloud"
                     />
                 ) : section.type === 'products' ? (
                     <ProductsSectionEditor
@@ -789,6 +799,16 @@ function SectionEditor({
                         mediaAssets={mediaAssets}
                         onChange={setContent}
                     />
+                ) : section.type === 'image-text' ? (
+                    <ImageTextSectionEditor
+                        content={content}
+                        mediaAssets={mediaAssets}
+                        onChange={setContent}
+                    />
+                ) : section.type === 'video' ? (
+                    <VideoSectionEditor content={content} mediaAssets={mediaAssets} onChange={setContent} />
+                ) : section.type === 'spacer-divider' ? (
+                    <SpacerDividerSectionEditor content={content} variant={variant} onChange={setContent} />
                 ) : (
                     (definition?.fields ?? []).map((field) => (
                         <label key={field.key} className="block text-xs font-semibold text-slate-600">
@@ -837,12 +857,14 @@ function SectionEditor({
                         options={['default', 'muted', 'primary', 'dark']}
                         onChange={(value) => setDesign({ ...design, surface: value })}
                     />
-                    <Select
-                        label="Spacing"
-                        value={design.spacing}
-                        options={['compact', 'normal', 'spacious']}
-                        onChange={(value) => setDesign({ ...design, spacing: value })}
-                    />
+                    {section.type !== 'spacer-divider' && (
+                        <Select
+                            label="Spacing"
+                            value={design.spacing}
+                            options={['compact', 'normal', 'spacious']}
+                            onChange={(value) => setDesign({ ...design, spacing: value })}
+                        />
+                    )}
                 </div>
                 <Select
                     label="Alignment"
@@ -3079,11 +3101,14 @@ function BrandCarouselSectionEditor({
     content,
     mediaAssets,
     onChange,
+    mode = 'carousel',
 }: {
     content: SectionContent;
     mediaAssets: MediaAssetOption[];
     onChange: (content: SectionContent) => void;
+    mode?: 'carousel' | 'cloud';
 }) {
+    const isCloud = mode === 'cloud';
     const logos = brandLogos(content);
     const set = (key: string, value: string) => onChange({ ...content, [key]: value });
     const updateLogos = (next: BrandLogo[]) => onChange({ ...content, logos: next });
@@ -3094,7 +3119,9 @@ function BrandCarouselSectionEditor({
             ),
         );
     const addLogo = () => {
-        const asset = mediaAssets[0];
+        const asset =
+            mediaAssets.find((item) => !logos.some((logo) => logo.image_id === item.public_id)) ??
+            mediaAssets[0];
         if (!asset || logos.length >= 20) return;
         updateLogos([
             ...logos,
@@ -3122,6 +3149,18 @@ function BrandCarouselSectionEditor({
 
     return (
         <div className="space-y-4">
+            {isCloud && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+                    Upload client, partner, or certification logo images in the{' '}
+                    <Link href="/dashboard/media" className="font-bold text-blue-700">
+                        Media library
+                    </Link>
+                    , then add and order them below. Give each logo a descriptive name and alt text; links are
+                    optional. Choose Grid, Band, or Default under Variant, adjust the display options, then
+                    publish to update the live site. Logo Cloud is a static layout; use Brand Carousel for a
+                    moving row.
+                </div>
+            )}
             <SlideField
                 label="Eyebrow"
                 value={textContent(content.eyebrow)}
@@ -3143,7 +3182,9 @@ function BrandCarouselSectionEditor({
             />
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-bold text-slate-700">Brand and partner logos</p>
+                    <p className="text-xs font-bold text-slate-700">
+                        {isCloud ? 'Logo cloud images' : 'Brand and partner logos'}
+                    </p>
                     <p className="text-[10px] text-slate-500">Add and order up to 20 logos</p>
                 </div>
                 <button
@@ -3215,7 +3256,11 @@ function BrandCarouselSectionEditor({
                                 onChange={(value) => chooseLogo(index, value)}
                             />
                             <SlideField
-                                label="Brand or partner name"
+                                label={
+                                    isCloud
+                                        ? 'Client, partner, or certification name'
+                                        : 'Brand or partner name'
+                                }
                                 value={logo.name}
                                 maxLength={100}
                                 onChange={(value) => updateLogo(index, { name: value })}
@@ -3253,42 +3298,93 @@ function BrandCarouselSectionEditor({
                     checked={content.open_new_tab === '1'}
                     onChange={(checked) => set('open_new_tab', checked ? '1' : '0')}
                 />
+                {isCloud && (
+                    <div className="mt-3 space-y-3">
+                        <Toggle
+                            label="Show cards behind logos"
+                            checked={content.show_cards === '1'}
+                            onChange={(checked) => set('show_cards', checked ? '1' : '0')}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Grid columns (Grid variant)
+                                <select
+                                    value={textContent(content.logo_columns) || '4'}
+                                    onChange={(event) => set('logo_columns', event.target.value)}
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    {[2, 3, 4, 5, 6].map((count) => (
+                                        <option key={count} value={count}>
+                                            {count}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Logo size
+                                <select
+                                    value={textContent(content.logo_size) || 'standard'}
+                                    onChange={(event) => set('logo_size', event.target.value)}
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    <option value="compact">Compact</option>
+                                    <option value="standard">Standard</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                            Space between logos
+                            <select
+                                value={textContent(content.logo_spacing) || 'standard'}
+                                onChange={(event) => set('logo_spacing', event.target.value)}
+                                className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                            >
+                                <option value="compact">Compact</option>
+                                <option value="standard">Standard</option>
+                                <option value="loose">Loose</option>
+                            </select>
+                        </label>
+                    </div>
+                )}
             </fieldset>
-            <fieldset className="rounded-xl border p-3">
-                <legend className="px-1 text-xs font-bold">Carousel behaviour</legend>
-                <Toggle
-                    label="Autoplay carousel"
-                    checked={content.autoplay !== '0'}
-                    onChange={(checked) => set('autoplay', checked ? '1' : '0')}
-                />
-                <Toggle
-                    label="Pause on hover or focus"
-                    checked={content.pause_on_hover !== '0'}
-                    onChange={(checked) => set('pause_on_hover', checked ? '1' : '0')}
-                />
-                <Toggle
-                    label="Navigation arrows"
-                    checked={content.show_arrows !== '0'}
-                    onChange={(checked) => set('show_arrows', checked ? '1' : '0')}
-                />
-                <label className="mt-2 block text-[11px] font-semibold text-slate-600">
-                    Autoplay interval
-                    <select
-                        value={textContent(content.interval) || '4'}
-                        onChange={(event) => set('interval', event.target.value)}
-                        className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
-                    >
-                        {[3, 4, 5, 6, 8, 10, 12, 15].map((seconds) => (
-                            <option key={seconds} value={seconds}>
-                                {seconds} seconds
-                            </option>
-                        ))}
-                    </select>
-                    <span className="mt-1 block font-normal text-slate-400">
-                        These controls apply when the Carousel variant is selected.
-                    </span>
-                </label>
-            </fieldset>
+            {!isCloud && (
+                <fieldset className="rounded-xl border p-3">
+                    <legend className="px-1 text-xs font-bold">Carousel behaviour</legend>
+                    <Toggle
+                        label="Autoplay carousel"
+                        checked={content.autoplay !== '0'}
+                        onChange={(checked) => set('autoplay', checked ? '1' : '0')}
+                    />
+                    <Toggle
+                        label="Pause on hover or focus"
+                        checked={content.pause_on_hover !== '0'}
+                        onChange={(checked) => set('pause_on_hover', checked ? '1' : '0')}
+                    />
+                    <Toggle
+                        label="Navigation arrows"
+                        checked={content.show_arrows !== '0'}
+                        onChange={(checked) => set('show_arrows', checked ? '1' : '0')}
+                    />
+                    <label className="mt-2 block text-[11px] font-semibold text-slate-600">
+                        Autoplay interval
+                        <select
+                            value={textContent(content.interval) || '4'}
+                            onChange={(event) => set('interval', event.target.value)}
+                            className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                        >
+                            {[3, 4, 5, 6, 8, 10, 12, 15].map((seconds) => (
+                                <option key={seconds} value={seconds}>
+                                    {seconds} seconds
+                                </option>
+                            ))}
+                        </select>
+                        <span className="mt-1 block font-normal text-slate-400">
+                            These controls apply when the Carousel variant is selected.
+                        </span>
+                    </label>
+                </fieldset>
+            )}
         </div>
     );
 }
@@ -4773,6 +4869,262 @@ function FeaturesSectionEditor({
     );
 }
 
+function StatisticsSectionEditor({
+    content,
+    onChange,
+}: {
+    content: SectionContent;
+    onChange: (content: SectionContent) => void;
+}) {
+    const stats = Array.isArray(content.stats) ? (content.stats as StatisticItem[]) : [];
+    const set = (key: string, value: string) => onChange({ ...content, [key]: value });
+    const updateStats = (next: StatisticItem[]) => onChange({ ...content, stats: next });
+    const updateStat = (index: number, changes: Partial<StatisticItem>) =>
+        updateStats(
+            stats.map((item, position) =>
+                position === index ? ({ ...item, ...changes } as StatisticItem) : item,
+            ),
+        );
+    const addStat = () => {
+        if (stats.length >= 8) return;
+        updateStats([
+            ...stats,
+            {
+                value: '0',
+                prefix: '',
+                suffix: '',
+                label: `Statistic ${stats.length + 1}`,
+                description: '',
+                trend_text: '',
+                trend_direction: 'neutral',
+                source_label: '',
+                source_url: '',
+            },
+        ]);
+    };
+    const move = (index: number, direction: -1 | 1) => {
+        const target = index + direction;
+        if (target < 0 || target >= stats.length) return;
+        updateStats(arrayMove(stats, index, target));
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+                Add your verified figures directly below; no separate content manager is needed. Enter a
+                number with up to two decimal places, then add a label, optional comparison trend, and a
+                source note or link. Use Variant for Default, Cards, or Split layout, and publish your draft
+                to update the live site. Empty statistics never show fabricated numbers.
+            </div>
+            <SlideField
+                label="Eyebrow"
+                value={textContent(content.eyebrow)}
+                maxLength={80}
+                onChange={(value) => set('eyebrow', value)}
+            />
+            <SlideField
+                label="Heading"
+                value={textContent(content.heading)}
+                maxLength={160}
+                onChange={(value) => set('heading', value)}
+            />
+            <SlideField
+                label="Introduction"
+                value={textContent(content.description)}
+                maxLength={1000}
+                multiline
+                onChange={(value) => set('description', value)}
+            />
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-xs font-bold text-slate-700">Statistics</p>
+                    <p className="text-[10px] text-slate-500">Add and order up to 8 metrics</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={addStat}
+                    disabled={stats.length >= 8}
+                    className="rounded-lg border px-2 py-1.5 text-[11px] font-semibold disabled:opacity-40"
+                >
+                    <Plus className="mr-1 inline size-3" /> Add statistic
+                </button>
+            </div>
+            {stats.length === 0 && (
+                <p className="rounded-lg border border-dashed bg-slate-50 p-3 text-xs text-slate-600">
+                    No statistics yet. Select “Add statistic” to enter your first verified result.
+                </p>
+            )}
+            {stats.map((item, index) => (
+                <fieldset key={index} className="rounded-xl border bg-slate-50 p-3">
+                    <legend className="px-1 text-xs font-bold">Statistic {index + 1}</legend>
+                    <div className="mb-3 flex justify-end gap-1">
+                        <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() => move(index, -1)}
+                            className="rounded p-1 disabled:opacity-25"
+                            aria-label={`Move statistic ${index + 1} up`}
+                        >
+                            <ArrowUp className="size-3.5" />
+                        </button>
+                        <button
+                            type="button"
+                            disabled={index === stats.length - 1}
+                            onClick={() => move(index, 1)}
+                            className="rounded p-1 disabled:opacity-25"
+                            aria-label={`Move statistic ${index + 1} down`}
+                        >
+                            <ArrowDown className="size-3.5" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => updateStats(stats.filter((_, position) => position !== index))}
+                            className="rounded p-1 text-red-600"
+                            aria-label={`Remove statistic ${index + 1}`}
+                        >
+                            <Trash2 className="size-3.5" />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-[1fr_2fr_1fr] gap-2">
+                        <SlideField
+                            label="Prefix"
+                            value={item.prefix}
+                            maxLength={12}
+                            onChange={(value) => updateStat(index, { prefix: value })}
+                        />
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                            Number
+                            <input
+                                value={item.value}
+                                inputMode="decimal"
+                                maxLength={12}
+                                onChange={(event) => updateStat(index, { value: event.target.value })}
+                                className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                            />
+                        </label>
+                        <SlideField
+                            label="Suffix"
+                            value={item.suffix}
+                            maxLength={12}
+                            onChange={(value) => updateStat(index, { suffix: value })}
+                        />
+                    </div>
+                    <div className="mt-3 space-y-3">
+                        <SlideField
+                            label="Label"
+                            value={item.label}
+                            maxLength={100}
+                            onChange={(value) => updateStat(index, { label: value })}
+                        />
+                        <SlideField
+                            label="Description (optional)"
+                            value={item.description}
+                            maxLength={300}
+                            multiline
+                            onChange={(value) => updateStat(index, { description: value })}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                            <SlideField
+                                label="Comparison or trend text"
+                                value={item.trend_text}
+                                maxLength={80}
+                                onChange={(value) => updateStat(index, { trend_text: value })}
+                            />
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Trend direction
+                                <select
+                                    value={item.trend_direction || 'neutral'}
+                                    onChange={(event) =>
+                                        updateStat(index, { trend_direction: event.target.value })
+                                    }
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    <option value="neutral">Neutral</option>
+                                    <option value="up">Up</option>
+                                    <option value="down">Down</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <SlideField
+                                label="Source name"
+                                value={item.source_label}
+                                maxLength={120}
+                                onChange={(value) => updateStat(index, { source_label: value })}
+                            />
+                            <SlideField
+                                label="Source URL (optional)"
+                                value={item.source_url}
+                                maxLength={2048}
+                                onChange={(value) => updateStat(index, { source_url: value })}
+                            />
+                        </div>
+                    </div>
+                </fieldset>
+            ))}
+            <fieldset className="space-y-2 rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Display and animation</legend>
+                <label className="block text-[11px] font-semibold text-slate-600">
+                    Columns (Default and Cards)
+                    <select
+                        value={textContent(content.stats_columns) || '4'}
+                        onChange={(event) => set('stats_columns', event.target.value)}
+                        className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                    >
+                        <option value="2">2 columns</option>
+                        <option value="3">3 columns</option>
+                        <option value="4">4 columns</option>
+                    </select>
+                </label>
+                <Toggle
+                    label="Highlight first statistic"
+                    checked={content.highlight_first === '1'}
+                    onChange={(checked) => set('highlight_first', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Show descriptions"
+                    checked={content.show_descriptions !== '0'}
+                    onChange={(checked) => set('show_descriptions', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Show comparison trends"
+                    checked={content.show_trends !== '0'}
+                    onChange={(checked) => set('show_trends', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Show source notes"
+                    checked={content.show_sources !== '0'}
+                    onChange={(checked) => set('show_sources', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Animate numbers when visible"
+                    checked={content.animate !== '0'}
+                    onChange={(checked) => set('animate', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Use thousands separators"
+                    checked={content.use_grouping !== '0'}
+                    onChange={(checked) => set('use_grouping', checked ? '1' : '0')}
+                />
+                <label className="block text-[11px] font-semibold text-slate-600">
+                    Animation duration
+                    <select
+                        value={textContent(content.duration) || '2'}
+                        onChange={(event) => set('duration', event.target.value)}
+                        className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                    >
+                        {[1, 2, 3, 4, 5].map((seconds) => (
+                            <option key={seconds} value={seconds}>
+                                {seconds} {seconds === 1 ? 'second' : 'seconds'}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            </fieldset>
+        </div>
+    );
+}
+
 function CountersSectionEditor({
     content,
     onChange,
@@ -5647,6 +5999,506 @@ function HeroSectionEditor({
     );
 }
 
+function SpacerDividerSectionEditor({
+    content,
+    variant,
+    onChange,
+}: {
+    content: SectionContent;
+    variant: string;
+    onChange: (content: SectionContent) => void;
+}) {
+    const set = (key: string, value: string) => onChange({ ...content, [key]: value });
+    const spaces = [0, 16, 32, 48, 64, 96, 128];
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+                Use this section between two content sections. Default draws a simple rule, Line adds a
+                decorative centre mark or optional label, and Space adds only whitespace. Choose the Variant
+                below, then set space before and after here. The internal label helps you identify the section
+                in Website Design and is not shown to visitors. Publish your draft to update the live site.
+            </div>
+            <SlideField
+                label="Internal label (editor only)"
+                value={textContent(content.heading)}
+                maxLength={80}
+                onChange={(value) => set('heading', value)}
+            />
+            <div className="grid grid-cols-2 gap-3">
+                {(['space_before', 'space_after'] as const).map((key) => (
+                    <label key={key} className="block text-[11px] font-semibold text-slate-600">
+                        {key === 'space_before' ? 'Space before' : 'Space after'}
+                        <select
+                            value={textContent(content[key]) || '48'}
+                            onChange={(event) => set(key, event.target.value)}
+                            className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                        >
+                            {spaces.map((value) => (
+                                <option key={value} value={value}>
+                                    {value === 0 ? 'None' : `${value} px`}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                ))}
+            </div>
+            {variant !== 'space' && (
+                <fieldset className="space-y-3 rounded-xl border p-3">
+                    <legend className="px-1 text-xs font-bold">Divider appearance</legend>
+                    <SlideField
+                        label="Visible centre label (optional)"
+                        value={textContent(content.line_label)}
+                        maxLength={80}
+                        onChange={(value) => set('line_label', value)}
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Select
+                            label="Line width"
+                            value={textContent(content.line_width) || 'full'}
+                            options={['narrow', 'medium', 'wide', 'full']}
+                            onChange={(value) => set('line_width', value)}
+                        />
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                            Line weight
+                            <select
+                                value={textContent(content.line_weight) || '1'}
+                                onChange={(event) => set('line_weight', event.target.value)}
+                                className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                            >
+                                {[1, 2, 3, 4].map((value) => (
+                                    <option key={value} value={value}>
+                                        {value} px
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <Select
+                            label="Line style"
+                            value={textContent(content.line_style) || 'solid'}
+                            options={['solid', 'dashed', 'dotted']}
+                            onChange={(value) => set('line_style', value)}
+                        />
+                        <Select
+                            label="Theme colour"
+                            value={textContent(content.line_color) || 'border'}
+                            options={['border', 'primary', 'accent']}
+                            onChange={(value) => set('line_color', value)}
+                        />
+                    </div>
+                </fieldset>
+            )}
+        </div>
+    );
+}
+
+function VideoSectionEditor({
+    content,
+    mediaAssets,
+    onChange,
+}: {
+    content: SectionContent;
+    mediaAssets: MediaAssetOption[];
+    onChange: (content: SectionContent) => void;
+}) {
+    const posterId = textContent(content.poster_image_id);
+    const selected = mediaAssets.find((asset) => asset.public_id === posterId);
+    const set = (key: string, value: string) => onChange({ ...content, [key]: value });
+    const choosePoster = (publicId: string) => {
+        const asset = mediaAssets.find((item) => item.public_id === publicId);
+        onChange({
+            ...content,
+            poster_image_id: publicId,
+            poster_alt:
+                publicId && !textContent(content.poster_alt)
+                    ? (asset?.alt_text ?? asset?.title ?? '')
+                    : textContent(content.poster_alt),
+        });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+                Add a YouTube or Vimeo watch URL, or a public HTTPS .mp4, .webm, or .ogg URL on
+                storage.googleapis.com. YouTube and Vimeo load only after a visitor clicks play; GCS files
+                play in the page. For the poster, upload an image to the{' '}
+                <Link href="/dashboard/media" className="font-bold text-blue-700">
+                    Media library
+                </Link>{' '}
+                first. The media library currently uploads images only, so GCS video files need a public URL.
+            </div>
+            <SlideField
+                label="Eyebrow"
+                value={textContent(content.eyebrow)}
+                maxLength={80}
+                onChange={(value) => set('eyebrow', value)}
+            />
+            <SlideField
+                label="Heading"
+                value={textContent(content.heading)}
+                maxLength={160}
+                onChange={(value) => set('heading', value)}
+            />
+            <SlideField
+                label="Introduction"
+                value={textContent(content.description)}
+                maxLength={2000}
+                multiline
+                onChange={(value) => set('description', value)}
+            />
+            <fieldset className="space-y-3 rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Video link</legend>
+                <SlideField
+                    label="Video URL"
+                    value={textContent(content.video_url)}
+                    maxLength={2048}
+                    onChange={(value) => set('video_url', value)}
+                />
+                <SlideField
+                    label="Accessible video title"
+                    value={textContent(content.video_title)}
+                    maxLength={160}
+                    onChange={(value) => set('video_title', value)}
+                />
+                <SlideField
+                    label="Caption"
+                    value={textContent(content.video_caption)}
+                    maxLength={500}
+                    multiline
+                    onChange={(value) => set('video_caption', value)}
+                />
+                <Toggle
+                    label="Show caption"
+                    checked={content.show_caption !== '0'}
+                    onChange={(checked) => set('show_caption', checked ? '1' : '0')}
+                />
+                <label className="block text-xs font-semibold text-slate-600">
+                    Poster shape
+                    <select
+                        value={textContent(content.aspect_ratio) || 'wide'}
+                        onChange={(event) => set('aspect_ratio', event.target.value)}
+                        className="mt-1.5 w-full rounded-lg border bg-white px-3 py-2 text-sm font-normal"
+                    >
+                        <option value="wide">Wide (16:9)</option>
+                        <option value="standard">Standard (4:3)</option>
+                        <option value="vertical">Vertical (9:16)</option>
+                    </select>
+                </label>
+                <Toggle
+                    label="Mute audio by default"
+                    checked={content.muted === '1'}
+                    onChange={(checked) => set('muted', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Loop video"
+                    checked={content.loop === '1'}
+                    onChange={(checked) => set('loop', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Show YouTube/Vimeo player controls"
+                    checked={content.show_controls !== '0'}
+                    onChange={(checked) => set('show_controls', checked ? '1' : '0')}
+                />
+                <Toggle
+                    label="Autoplay direct GCS video files"
+                    checked={content.autoplay === '1'}
+                    onChange={(checked) => set('autoplay', checked ? '1' : '0')}
+                />
+                <p className="text-[11px] leading-5 text-slate-500">
+                    External videos always wait for a click before loading, then attempt to play. Direct GCS
+                    files always have controls. Autoplay applies only to GCS files and automatically mutes
+                    them; browser settings may still prevent autoplay.
+                </p>
+            </fieldset>
+            <fieldset className="space-y-3 rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Poster image</legend>
+                {selected ? (
+                    <img
+                        src={selected.thumbnail_url}
+                        alt=""
+                        className="aspect-video w-full rounded-lg object-cover"
+                    />
+                ) : (
+                    <div className="grid aspect-video place-items-center rounded-lg bg-slate-100 text-slate-400">
+                        <ImageIcon className="size-7" />
+                    </div>
+                )}
+                {mediaAssets.length ? (
+                    <SlideSelect
+                        label="Poster"
+                        value={posterId}
+                        assets={mediaAssets}
+                        onChange={choosePoster}
+                    />
+                ) : (
+                    <p className="rounded-lg border border-dashed bg-slate-50 p-3 text-xs text-slate-600">
+                        No images yet. Upload one in the Media library.
+                    </p>
+                )}
+                {posterId && (
+                    <SlideField
+                        label="Poster alt text"
+                        value={textContent(content.poster_alt)}
+                        maxLength={255}
+                        onChange={(value) => set('poster_alt', value)}
+                    />
+                )}
+            </fieldset>
+            <fieldset className="space-y-3 rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Optional links</legend>
+                <SlideField
+                    label="Transcript URL"
+                    value={textContent(content.transcript_url)}
+                    maxLength={2048}
+                    onChange={(value) => set('transcript_url', value)}
+                />
+                <SlideField
+                    label="Transcript link text"
+                    value={textContent(content.transcript_label)}
+                    maxLength={60}
+                    onChange={(value) => set('transcript_label', value)}
+                />
+                <SlideField
+                    label="Button text"
+                    value={textContent(content.primary_label)}
+                    maxLength={60}
+                    onChange={(value) => set('primary_label', value)}
+                />
+                <SlideField
+                    label="Button URL"
+                    value={textContent(content.primary_url)}
+                    maxLength={2048}
+                    onChange={(value) => set('primary_url', value)}
+                />
+                <Toggle
+                    label="Open button in new tab"
+                    checked={content.primary_new_tab === '1'}
+                    onChange={(checked) => set('primary_new_tab', checked ? '1' : '0')}
+                />
+            </fieldset>
+        </div>
+    );
+}
+
+function ImageTextSectionEditor({
+    content,
+    mediaAssets,
+    onChange,
+}: {
+    content: SectionContent;
+    mediaAssets: MediaAssetOption[];
+    onChange: (content: SectionContent) => void;
+}) {
+    const imageId = textContent(content.image_id);
+    const selected = mediaAssets.find((asset) => asset.public_id === imageId);
+    const set = (key: string, value: string) => onChange({ ...content, [key]: value });
+    const chooseImage = (publicId: string) => {
+        const asset = mediaAssets.find((item) => item.public_id === publicId);
+        onChange({
+            ...content,
+            image_id: publicId,
+            image_alt:
+                publicId && !textContent(content.image_alt)
+                    ? (asset?.alt_text ?? asset?.title ?? '')
+                    : textContent(content.image_alt),
+            mobile_image_id: publicId ? textContent(content.mobile_image_id) : '',
+        });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+                Pair your text with an image from the{' '}
+                <Link href="/dashboard/media" className="font-bold text-blue-700">
+                    Media library
+                </Link>
+                . Upload desktop and optional mobile images there, then select them below. Set descriptive alt
+                text, choose the layout and appearance here, and publish your draft to update the live site.
+            </div>
+            <SlideField
+                label="Eyebrow"
+                value={textContent(content.eyebrow)}
+                maxLength={80}
+                onChange={(value) => set('eyebrow', value)}
+            />
+            <SlideField
+                label="Heading"
+                value={textContent(content.heading)}
+                maxLength={160}
+                onChange={(value) => set('heading', value)}
+            />
+            <SlideField
+                label="Introduction"
+                value={textContent(content.description)}
+                maxLength={2000}
+                multiline
+                onChange={(value) => set('description', value)}
+            />
+            <div className="text-xs font-semibold text-slate-600">
+                <p>Formatted text</p>
+                <BuilderRichText value={textContent(content.body)} onChange={(value) => set('body', value)} />
+            </div>
+            <fieldset className="rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Optional links</legend>
+                <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                        <SlideField
+                            label="Primary button text"
+                            value={textContent(content.primary_label)}
+                            maxLength={60}
+                            onChange={(value) => set('primary_label', value)}
+                        />
+                        <SlideField
+                            label="Primary button URL"
+                            value={textContent(content.primary_url)}
+                            maxLength={2048}
+                            onChange={(value) => set('primary_url', value)}
+                        />
+                    </div>
+                    <Toggle
+                        label="Open primary link in new tab"
+                        checked={content.primary_new_tab === '1'}
+                        onChange={(checked) => set('primary_new_tab', checked ? '1' : '0')}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                        <SlideField
+                            label="Secondary button text"
+                            value={textContent(content.secondary_label)}
+                            maxLength={60}
+                            onChange={(value) => set('secondary_label', value)}
+                        />
+                        <SlideField
+                            label="Secondary button URL"
+                            value={textContent(content.secondary_url)}
+                            maxLength={2048}
+                            onChange={(value) => set('secondary_url', value)}
+                        />
+                    </div>
+                    <Toggle
+                        label="Open secondary link in new tab"
+                        checked={content.secondary_new_tab === '1'}
+                        onChange={(checked) => set('secondary_new_tab', checked ? '1' : '0')}
+                    />
+                    <SlideField
+                        label="Supporting note"
+                        value={textContent(content.supporting_text)}
+                        maxLength={300}
+                        multiline
+                        onChange={(value) => set('supporting_text', value)}
+                    />
+                </div>
+            </fieldset>
+            <fieldset className="rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Image</legend>
+                {selected ? (
+                    <img
+                        src={selected.thumbnail_url}
+                        alt=""
+                        className="mb-3 aspect-[4/3] w-full rounded-lg object-cover"
+                    />
+                ) : (
+                    <div className="mb-3 grid aspect-[4/3] place-items-center rounded-lg bg-slate-100 text-slate-400">
+                        <ImageIcon className="size-7" />
+                    </div>
+                )}
+                {mediaAssets.length ? (
+                    <SlideSelect
+                        label="Desktop image"
+                        value={imageId}
+                        assets={mediaAssets}
+                        onChange={chooseImage}
+                    />
+                ) : (
+                    <p className="rounded-lg border border-dashed bg-slate-50 p-3 text-xs text-slate-600">
+                        No images yet. Upload one in the Media library.
+                    </p>
+                )}
+                {imageId && (
+                    <div className="mt-3 space-y-3">
+                        <SlideSelect
+                            label="Mobile image (optional)"
+                            value={textContent(content.mobile_image_id)}
+                            assets={mediaAssets}
+                            onChange={(value) => set('mobile_image_id', value)}
+                        />
+                        <SlideField
+                            label="Alt text"
+                            value={textContent(content.image_alt)}
+                            maxLength={255}
+                            onChange={(value) => set('image_alt', value)}
+                        />
+                        <SlideField
+                            label="Caption"
+                            value={textContent(content.image_caption)}
+                            maxLength={500}
+                            onChange={(value) => set('image_caption', value)}
+                        />
+                        <Toggle
+                            label="Show caption"
+                            checked={content.show_image_caption !== '0'}
+                            onChange={(checked) => set('show_image_caption', checked ? '1' : '0')}
+                        />
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                            Image position for Default layout
+                            <select
+                                value={textContent(content.image_position) || 'right'}
+                                onChange={(event) => set('image_position', event.target.value)}
+                                className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                            >
+                                <option value="right">Right of text</option>
+                                <option value="left">Left of text</option>
+                            </select>
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Image size
+                                <select
+                                    value={textContent(content.image_size) || 'balanced'}
+                                    onChange={(event) => set('image_size', event.target.value)}
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    <option value="compact">Compact</option>
+                                    <option value="balanced">Balanced</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </label>
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Image ratio
+                                <select
+                                    value={textContent(content.image_ratio) || 'landscape'}
+                                    onChange={(event) => set('image_ratio', event.target.value)}
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    <option value="landscape">Landscape</option>
+                                    <option value="square">Square</option>
+                                    <option value="portrait">Portrait</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                            Image fit
+                            <select
+                                value={textContent(content.image_fit) || 'cover'}
+                                onChange={(event) => set('image_fit', event.target.value)}
+                                className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                            >
+                                <option value="cover">Fill frame</option>
+                                <option value="contain">Show full image</option>
+                            </select>
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => onChange({ ...content, image_id: '', mobile_image_id: '' })}
+                            className="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600"
+                        >
+                            Remove images
+                        </button>
+                    </div>
+                )}
+            </fieldset>
+        </div>
+    );
+}
+
 function RichTextSectionEditor({
     content,
     mediaAssets,
@@ -5670,9 +6522,19 @@ function RichTextSectionEditor({
                     : textContent(content.image_alt),
         });
     };
+    const chooseMobileImage = (publicId: string) => set('mobile_image_id', publicId);
 
     return (
         <div className="space-y-4">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs leading-5 text-blue-900">
+                Add formatted paragraphs, headings, lists, quotes, and links below. For a supporting image,
+                upload it to the{' '}
+                <Link href="/dashboard/media" className="font-bold text-blue-700">
+                    Media library
+                </Link>
+                , then select it here. Adjust the section variant and design controls for its width,
+                background, spacing, and alignment. Changes appear on your live website after publishing.
+            </div>
             <SlideField
                 label="Eyebrow"
                 value={textContent(content.eyebrow)}
@@ -5685,15 +6547,44 @@ function RichTextSectionEditor({
                 maxLength={160}
                 onChange={(value) => set('heading', value)}
             />
-            <label className="block text-xs font-semibold text-slate-600">
-                Formatted content
+            <SlideField
+                label="Introduction (optional)"
+                value={textContent(content.introduction)}
+                maxLength={1000}
+                multiline
+                onChange={(value) => set('introduction', value)}
+            />
+            <div className="text-xs font-semibold text-slate-600">
+                <p>Formatted content</p>
                 <BuilderRichText
                     value={textContent(content.body) || textContent(content.description)}
                     onChange={(value) => set('body', value)}
                 />
-            </label>
+            </div>
             <fieldset className="rounded-xl border p-3">
-                <legend className="px-1 text-xs font-bold">Optional image</legend>
+                <legend className="px-1 text-xs font-bold">Optional action link</legend>
+                <div className="space-y-3">
+                    <SlideField
+                        label="Button text"
+                        value={textContent(content.primary_label)}
+                        maxLength={60}
+                        onChange={(value) => set('primary_label', value)}
+                    />
+                    <SlideField
+                        label="Button URL"
+                        value={textContent(content.primary_url)}
+                        maxLength={2048}
+                        onChange={(value) => set('primary_url', value)}
+                    />
+                    <Toggle
+                        label="Open button in new tab"
+                        checked={content.primary_new_tab === '1'}
+                        onChange={(checked) => set('primary_new_tab', checked ? '1' : '0')}
+                    />
+                </div>
+            </fieldset>
+            <fieldset className="rounded-xl border p-3">
+                <legend className="px-1 text-xs font-bold">Supporting image</legend>
                 {selected ? (
                     <img
                         src={selected.thumbnail_url}
@@ -5714,10 +6605,21 @@ function RichTextSectionEditor({
                         , then return here.
                     </p>
                 ) : (
-                    <SlideSelect label="Image" value={imageId} assets={mediaAssets} onChange={chooseImage} />
+                    <SlideSelect
+                        label="Desktop image"
+                        value={imageId}
+                        assets={mediaAssets}
+                        onChange={chooseImage}
+                    />
                 )}
                 {imageId && (
                     <div className="mt-3 space-y-3">
+                        <SlideSelect
+                            label="Mobile image (optional)"
+                            value={textContent(content.mobile_image_id)}
+                            assets={mediaAssets}
+                            onChange={chooseMobileImage}
+                        />
                         <SlideField
                             label="Alt text"
                             value={textContent(content.image_alt)}
@@ -5730,6 +6632,11 @@ function RichTextSectionEditor({
                             maxLength={500}
                             onChange={(value) => set('image_caption', value)}
                         />
+                        <Toggle
+                            label="Show image caption"
+                            checked={content.show_image_caption !== '0'}
+                            onChange={(checked) => set('show_image_caption', checked ? '1' : '0')}
+                        />
                         <label className="block text-[11px] font-semibold text-slate-600">
                             Image position
                             <select
@@ -5741,12 +6648,49 @@ function RichTextSectionEditor({
                                 <option value="left">Left of text</option>
                             </select>
                         </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Image size
+                                <select
+                                    value={textContent(content.image_size) || 'balanced'}
+                                    onChange={(event) => set('image_size', event.target.value)}
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    <option value="compact">Compact</option>
+                                    <option value="balanced">Balanced</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </label>
+                            <label className="block text-[11px] font-semibold text-slate-600">
+                                Image ratio
+                                <select
+                                    value={textContent(content.image_ratio) || 'landscape'}
+                                    onChange={(event) => set('image_ratio', event.target.value)}
+                                    className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                                >
+                                    <option value="landscape">Landscape</option>
+                                    <option value="square">Square</option>
+                                    <option value="portrait">Portrait</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label className="block text-[11px] font-semibold text-slate-600">
+                            Image fit
+                            <select
+                                value={textContent(content.image_fit) || 'cover'}
+                                onChange={(event) => set('image_fit', event.target.value)}
+                                className="mt-1 w-full rounded-lg border bg-white px-2 py-2 text-xs font-normal"
+                            >
+                                <option value="cover">Fill frame</option>
+                                <option value="contain">Show full image</option>
+                            </select>
+                        </label>
                         <button
                             type="button"
-                            onClick={() => chooseImage('')}
+                            onClick={() => onChange({ ...content, image_id: '', mobile_image_id: '' })}
                             className="w-full rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600"
                         >
-                            Remove image
+                            Remove images
                         </button>
                     </div>
                 )}
@@ -5771,6 +6715,15 @@ function BuilderRichText({ value, onChange }: { value: string; onChange: (value:
         document.execCommand(name, false, commandValue);
         onChange(editor.current?.innerHTML ?? '');
     };
+    const addLink = () => {
+        const url = window.prompt('Link URL (https://, /page, #section, mailto: or tel:)')?.trim();
+        if (!url) return;
+        if (!/^(?:https?:\/\/[^\s]+|\/(?!\/)[^\s]*|#[^\s]+|mailto:[^\s]+|tel:[^\s]+)$/i.test(url)) {
+            toast.error('Enter a valid website, page, email, or telephone URL.');
+            return;
+        }
+        command('createLink', url);
+    };
 
     return (
         <div className="mt-1.5 overflow-hidden rounded-lg border bg-white">
@@ -5780,7 +6733,9 @@ function BuilderRichText({ value, onChange }: { value: string; onChange: (value:
                     ['italic', 'Italic'],
                     ['insertUnorderedList', 'Bullets'],
                     ['insertOrderedList', 'Numbers'],
-                    ['formatBlock', 'Heading', 'h3'],
+                    ['formatBlock', 'Paragraph', 'p'],
+                    ['formatBlock', 'Heading 2', 'h2'],
+                    ['formatBlock', 'Heading 3', 'h3'],
                     ['formatBlock', 'Quote', 'blockquote'],
                 ].map(([name, label, commandValue]) => (
                     <button
@@ -5793,6 +6748,30 @@ function BuilderRichText({ value, onChange }: { value: string; onChange: (value:
                         {label}
                     </button>
                 ))}
+                <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={addLink}
+                    className="rounded border bg-white px-2 py-1 text-[10px] font-semibold"
+                >
+                    Link
+                </button>
+                <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => command('unlink')}
+                    className="rounded border bg-white px-2 py-1 text-[10px] font-semibold"
+                >
+                    Unlink
+                </button>
+                <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => command('insertHorizontalRule')}
+                    className="rounded border bg-white px-2 py-1 text-[10px] font-semibold"
+                >
+                    Divider
+                </button>
             </div>
             <div
                 ref={editor}
@@ -6129,6 +7108,7 @@ function textContent(
         | string
         | HeroSlide[]
         | CounterItem[]
+        | StatisticItem[]
         | BrandLogo[]
         | FeatureItem[]
         | ProcessItem[]
