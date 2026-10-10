@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('email');
             $table->string('source_page')->nullable();
             $table->string('ip_hash', 64)->nullable();
-            $table->timestamp('consented_at');
-            $table->timestamp('subscribed_at');
+            $table->dateTime('consented_at');
+            $table->dateTime('subscribed_at');
             $table->timestamp('unsubscribed_at')->nullable();
             $table->timestamps();
             $table->unique(['website_id', 'email']);

@@ -69,7 +69,9 @@ return new class extends Migration
             $table->timestamp('read_at')->nullable();
             $table->boolean('is_archived')->default(false);
             $table->timestamp('archived_at')->nullable();
-            $table->timestamp('submitted_at');
+            // DATETIME avoids legacy MySQL/MariaDB implicit TIMESTAMP defaults
+            // (for example 0000-00-00 00:00:00 under strict SQL mode).
+            $table->dateTime('submitted_at');
             $table->timestamps();
             $table->index(['tenant_id', 'website_id', 'is_archived', 'is_read', 'submitted_at'], 'contact_messages_inbox');
         });

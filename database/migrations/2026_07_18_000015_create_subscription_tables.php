@@ -41,7 +41,7 @@ return new class extends Migration
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('plan_id')->constrained()->restrictOnDelete();
             $table->string('status', 30)->index();
-            $table->timestamp('starts_at');
+            $table->dateTime('starts_at');
             $table->timestamp('trial_ends_at')->nullable();
             $table->timestamp('current_period_starts_at')->nullable();
             $table->timestamp('current_period_ends_at')->nullable()->index();
@@ -79,7 +79,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('subscription_id')->constrained()->cascadeOnDelete();
             $table->string('reminder_key', 80);
-            $table->timestamp('sent_at');
+            $table->dateTime('sent_at');
             $table->timestamps();
             $table->unique(['subscription_id', 'reminder_key']);
         });
