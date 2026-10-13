@@ -35,7 +35,7 @@ interface AppShellProps extends PropsWithChildren {
     area?: 'tenant' | 'admin';
 }
 
-const tenantNav = [
+const tenantNav: NavItem[] = [
     { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Website builder', href: '/dashboard/builder', icon: PanelsTopLeft },
     { label: 'Design', href: '/dashboard/design', icon: Palette },
@@ -63,12 +63,19 @@ const contentNav = [
     ['Careers', 'careers'],
 ];
 
-const adminNav = [
+interface NavItem {
+    label: string;
+    href: string;
+    icon: typeof Building2;
+    disabled?: boolean;
+}
+
+const adminNav: NavItem[] = [
     { label: 'Platform overview', href: '/admin', icon: ShieldCheck },
     { label: 'Subscriptions', href: '/admin/subscriptions', icon: CreditCard },
     { label: 'Plans', href: '/admin/plans', icon: PackageCheck },
-    { label: 'Customers', href: '#', icon: Building2, disabled: true },
-    { label: 'Platform settings', href: '#', icon: Settings, disabled: true },
+    { label: 'Customers', href: '/admin/customers', icon: Building2 },
+    { label: 'Platform settings', href: '/admin/settings', icon: Settings },
 ];
 
 export function AppShell({ children, title, description, breadcrumbs, area = 'tenant' }: AppShellProps) {

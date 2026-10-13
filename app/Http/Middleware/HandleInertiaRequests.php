@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Middleware;
 use App\Subscriptions\FeatureGate;
 use App\Models\Plan;
+use App\Models\PlatformSetting;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -22,11 +23,12 @@ class HandleInertiaRequests extends Middleware
         $website = $context->website();
         $subscription = $website ? app(FeatureGate::class)->subscription($website) : null;
         $subscriptionPlan = $subscription?->plan;
+        $platformSettings = PlatformSetting::current();
 
         return [
             ...parent::share($request),
             'app' => [
-                'name' => config('app.name'),
+                'name' => $platformSettings->platform_name,
                 'domain' => config('domains.root'),
             ],
             'auth' => [

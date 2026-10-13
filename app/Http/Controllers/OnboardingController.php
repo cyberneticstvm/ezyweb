@@ -7,6 +7,7 @@ use App\Enums\MembershipStatus;
 use App\Enums\PlatformRole;
 use App\Http\Requests\StoreOnboardingRequest;
 use App\Models\User;
+use App\Models\PlatformSetting;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,8 +27,15 @@ class OnboardingController extends Controller
             return redirect()->route('dashboard');
         }
 
+        $settings = PlatformSetting::current();
+
         return Inertia::render('onboarding/index', [
             'options' => config('onboarding'),
+            'defaults' => [
+                'country_code' => $settings->default_country_code,
+                'timezone' => $settings->default_timezone,
+                'locale' => $settings->default_locale,
+            ],
         ]);
     }
 

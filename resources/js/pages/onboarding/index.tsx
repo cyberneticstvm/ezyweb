@@ -85,7 +85,13 @@ const steps = [
     { title: 'Confirm', icon: Rocket },
 ];
 
-export default function Onboarding({ options }: { options: OnboardingOptions }) {
+export default function Onboarding({
+    options,
+    defaults,
+}: {
+    options: OnboardingOptions;
+    defaults: { country_code: string; timezone: string; locale: string };
+}) {
     const { auth } = usePage<AppPageProps>().props;
     const [step, setStep] = useState(0);
     const [availability, setAvailability] = useState<Availability | null>(null);
@@ -94,9 +100,9 @@ export default function Onboarding({ options }: { options: OnboardingOptions }) 
     const { data, setData, post, processing, errors } = useForm<OnboardingForm>({
         business_name: '',
         business_category: 'consulting',
-        country_code: 'IN',
-        timezone: 'Asia/Kolkata',
-        default_language: 'en',
+        country_code: defaults.country_code,
+        timezone: defaults.timezone,
+        default_language: defaults.locale,
         contact_email: auth.user?.email ?? '',
         contact_phone: auth.user?.phone ?? '',
         subdomain: '',

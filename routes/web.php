@@ -3,6 +3,9 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AdminPlanController;
+use App\Http\Controllers\AdminCustomerController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminPlatformSettingsController;
 use App\Http\Controllers\BuilderController;
 use App\Http\Controllers\BuilderPageController;
 use App\Http\Controllers\BuilderSectionController;
@@ -133,7 +136,9 @@ Route::middleware(['auth', 'signed:relative', 'tenant-member'])->group(function 
 });
 
 Route::middleware(['auth', 'super-admin'])->prefix('admin')->name('admin.')->group(function (): void {
-    Route::get('/', fn () => Inertia::render('admin/index'))->name('index');
+    Route::get('/', AdminDashboardController::class)->name('index');
+    Route::get('/customers', [AdminCustomerController::class, 'index'])->name('customers.index');
+    Route::put('/customers/{tenant}/status', [AdminCustomerController::class, 'status'])->name('customers.status');
     Route::get('/plans', [AdminPlanController::class, 'index'])->name('plans.index');
     Route::put('/plans/{plan:public_id}', [AdminPlanController::class, 'update'])->name('plans.update');
     Route::get('/subscriptions', [\App\Http\Controllers\AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
@@ -141,6 +146,8 @@ Route::middleware(['auth', 'super-admin'])->prefix('admin')->name('admin.')->gro
     Route::post('/subscriptions/{subscription}/extend', [\App\Http\Controllers\AdminSubscriptionController::class, 'extend'])->name('subscriptions.extend');
     Route::put('/subscriptions/{subscription}/status', [\App\Http\Controllers\AdminSubscriptionController::class, 'status'])->name('subscriptions.status');
     Route::post('/subscriptions/{subscription}/payments', [\App\Http\Controllers\AdminSubscriptionController::class, 'payment'])->name('subscriptions.payments');
+    Route::get('/settings', [AdminPlatformSettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings', [AdminPlatformSettingsController::class, 'update'])->name('settings.update');
 });
 
 Route::get('/{pageSlug}', [PublicWebsiteController::class, 'show'])
